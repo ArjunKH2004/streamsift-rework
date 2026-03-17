@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Sentiment Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="top" id="videoInfo">
+  <b>🎥 YouTube Sentiment Dashboard</b>
+  <p>Enter a video URL and API key to analyze comments</p>
+</div>
+
+<div class="controls">
+  <input id="apiKey" type="password" placeholder="YouTube API Key">
+  <input id="url" placeholder="YouTube Video URL">
+
+  <select id="mode">
+    <option value="static">📊 Static Analysis</option>
+    <option value="live">🔴 Live Stream</option>
+  </select>
+
+  <select id="staticLimit">
+    <option value="50">50 comments</option>
+    <option value="100">100 comments</option>
+    <option value="500">500 comments</option>
+    <option value="all">All comments</option>
+  </select>
+
+  <select id="liveRate" style="display:none;">
+    <option value="10">Update every 10s</option>
+    <option value="15">Update every 15s</option>
+    <option value="30">Update every 30s</option>
+    <option value="manual">Manual update</option>
+  </select>
+
+  <button onclick="analyze()">🚀 Analyze</button>
+</div>
+
+<div class="main">
+  <div id="comments">
+    <p style="text-align:center; color:#ffd966;">No comments loaded yet. Start an analysis!</p>
+  </div>
+
+  <div class="right">
+    <div class="summaryBox">
+      <h3 style="margin-bottom:10px; color:#7cffb2;">📈 Summary</h3>
+      <p id="summary">Waiting for analysis...</p>
+      <button onclick="updateLiveSummary()" style="display:none;" id="liveSummaryBtn">🔄 Update Summary</button>
+    </div>
+
+    <div class="chartsContainer">
+      <div class="chartBox">
+        <canvas id="lineChart"></canvas>
+      </div>
+      
+      <div class="chartBox">
+        <canvas id="pieChart"></canvas>
+      </div>
+    </div>
+
+    <button onclick="updateLiveGraph()" style="display:none;" id="liveGraphBtn">🔄 Update Live Graph</button>
+  </div>
+</div>
+
+<script src="/static/script.js"></script>
+</body>
+</html>

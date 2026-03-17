@@ -1,0 +1,41 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Write a clean requirements.txt (the local one has a malformed line)
+RUN printf 'flask\ngoogle-api-python-client\ntextblob\npandas\nnltk\nflask-cors\nflask-socketio\nscikit-learn\ngoogle-generativeai\n' > /app/requirements.txt
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Download NLTK data required by TextBlob
+RUN python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger'); nltk.download('averaged_perceptron_tagger_eng')"
+
+# Copy backend source code
+COPY backend/app.py /app/app.py
+COPY backend/templates/ /app/templates/
+COPY backend/static/ /app/static/
+
+# Copy model files into /app/models/
+RUN mkdir -p /app/models
+COPY backend/yt_ai_classifier_model_2.sav /app/models/yt_ai_classifier_model_2.sav
+COPY backend/tokenizer.pkl /app/models/tokenizer.pkl
+COPY backend/ModelV2.keras /app/models/ModelV2.keras
+COPY backend/Tokenizer4/ /app/models/Tokenizer4/
+COPY tfidf_vectorizer.sav /app/models/tfidf_vectorizer.sav
+
+# Copy and set entrypoint
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Environment variables for model paths
+ENV MODEL_PATH=/app/models/yt_ai_classifier_model_2.sav
+ENV VECTORIZER_PATH=/app/models/tfidf_vectorizer.sav
+
+EXPOSE 5000
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

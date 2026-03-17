@@ -1,0 +1,26 @@
+﻿backend-1  | Model paths patched for container environment.
+backend-1  | /app/app.py:11: FutureWarning: 
+backend-1  | 
+backend-1  | All support for the `google.generativeai` package has ended. It will no longer be receiving 
+backend-1  | updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+backend-1  | See README for more details:
+backend-1  | 
+backend-1  | https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+backend-1  | 
+backend-1  |   import google.generativeai as genai
+backend-1  | /usr/local/lib/python3.11/site-packages/sklearn/base.py:463: InconsistentVersionWarning: Trying to unpickle estimator LogisticRegression from version 1.2.1 when using version 1.8.0. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+backend-1  | https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
+backend-1  |   warnings.warn(
+backend-1  | Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+backend-1  | Loading classifier from: /app/models/yt_ai_classifier_model_2.sav
+backend-1  | Loading vectorizer from: /app/models/tfidf_vectorizer.sav
+backend-1  | Error loading models: No module named 'tfIdfInheritVectorizer'
+backend-1  | StreamSift Backend ΓÇö YouTube + Twitch
+backend-1  |  * Serving Flask app 'app'
+backend-1  |  * Debug mode: off
+backend-1  | [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+backend-1  |  * Running on all addresses (0.0.0.0)
+backend-1  |  * Running on http://127.0.0.1:5000
+backend-1  |  * Running on http://172.18.0.2:5000
+backend-1  | [33mPress CTRL+C to quit[0m
+backend-1  | 172.18.0.1 - - [26/Feb/2026 12:48:46] "GET /health HTTP/1.1" 200 -

@@ -1,0 +1,264 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: 
+    linear-gradient(135deg, rgba(10, 10, 15, 0.85) 0%, rgba(26, 26, 46, 0.85) 100%),
+    url("https://tenor.com/en-GB/view/satono-diamond-anime-dance-anime-uma-musume-gif-2047273613469475576.gif") center/cover fixed;
+  color: #eee;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* Top Video Info */
+.top {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.top b {
+  font-size: 1.4rem;
+  color: #7cffb2;
+  display: block;
+  margin-bottom: 10px;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 25px;
+}
+
+.controls input,
+.controls select,
+.controls button {
+  padding: 12px 18px;
+  border: 1px solid rgba(124, 255, 178, 0.3);
+  background: rgba(0, 0, 0, 0.4);
+  color: #eee;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+.controls input {
+  min-width: 250px;
+}
+
+.controls input:focus,
+.controls select:focus {
+  outline: none;
+  border-color: #7cffb2;
+  box-shadow: 0 0 15px rgba(124, 255, 178, 0.3);
+}
+
+.controls button {
+  background: linear-gradient(135deg, #7cffb2 0%, #5fd9a3 100%);
+  color: #0a0a0f;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 120px;
+}
+
+.controls button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(124, 255, 178, 0.4);
+}
+
+.controls button:active {
+  transform: translateY(0);
+}
+
+/* Main Layout */
+.main {
+  display: flex;
+  gap: 20px;
+}
+
+/* Comments Section */
+#comments {
+  width: 55%;
+  max-height: 600px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+#comments::-webkit-scrollbar {
+  width: 8px;
+}
+
+#comments::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+#comments::-webkit-scrollbar-thumb {
+  background: rgba(124, 255, 178, 0.3);
+  border-radius: 4px;
+}
+
+#comments::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 255, 178, 0.5);
+}
+
+#comments p {
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 3px solid;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* Sentiment Colors */
+.good { 
+  color: #7cffb2;
+  border-left-color: #7cffb2;
+}
+
+.bad { 
+  color: #ff7c7c;
+  border-left-color: #ff7c7c;
+}
+
+.neutral { 
+  color: #ffd966;
+  border-left-color: #ffd966;
+}
+
+/* Right Panel */
+.right {
+  width: 45%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Summary Box */
+.summaryBox {
+  background: rgba(124, 255, 178, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(124, 255, 178, 0.3);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+#summary {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin-bottom: 15px;
+  color: #7cffb2;
+  font-weight: 500;
+}
+
+.summaryBox button {
+  padding: 10px 20px;
+  background: rgba(124, 255, 178, 0.2);
+  border: 1px solid rgba(124, 255, 178, 0.4);
+  color: #7cffb2;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.summaryBox button:hover {
+  background: rgba(124, 255, 178, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Charts Container */
+.chartsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.chartBox {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+canvas {
+  max-height: 250px !important;
+  width: 100% !important;
+}
+
+/* Live Update Button */
+.right > button {
+  padding: 12px;
+  background: linear-gradient(135deg, #ff7c7c 0%, #ff5c5c 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.right > button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(255, 124, 124, 0.4);
+}
+
+/* Loading State */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  font-size: 1.1rem;
+  color: #ffd966;
+}
+
+.loading::after {
+  content: '...';
+  animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .main {
+    flex-direction: column;
+  }
+  
+  #comments,
+  .right {
+    width: 100%;
+  }
+}
