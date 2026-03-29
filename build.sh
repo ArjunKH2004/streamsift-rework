@@ -13,6 +13,9 @@ echo "Moving static files to backend..."
 rm -rf backend/static
 cp -r out backend/static
 
+echo "Copying models to root as fallback..."
+cp backend/*.sav .
+
 echo "Environment check:"
 python --version
 python -m pip --version

@@ -258,6 +258,25 @@ def yt(api_key=None):
 def home():
     return render_template("index.html")
 
+# ===== DEBUG MODELS =====
+@app.route("/api/debug/models")
+def debug_models():
+    res = {
+        "cwd": os.getcwd(),
+        "sys_path": sys.path,
+        "base_dir": BASE_DIR,
+        "root_dir": ROOT_DIR,
+        "model_path": MODEL_PATH,
+        "vectorizer_path": VECTORIZER_PATH,
+        "model_exists": os.path.exists(MODEL_PATH),
+        "vectorizer_exists": os.path.exists(VECTORIZER_PATH),
+        "model_loaded": model is not None,
+        "vectorizer_loaded": vectorizer is not None,
+        "files_in_base": os.listdir(BASE_DIR) if os.path.exists(BASE_DIR) else [],
+        "files_in_root": os.listdir(ROOT_DIR) if os.path.exists(ROOT_DIR) else []
+    }
+    return jsonify(res)
+
 # ===== VIDEO INFO =====
 @app.route("/video-info", methods=["POST"])
 def video_info():
@@ -312,9 +331,12 @@ def analyze():
             ).execute()
 
             comments.extend(res["items"])
+            print(f"Fetched {len(comments)} comments so far...")
             page = res.get("nextPageToken")
             if not page:
                 break
+        
+        print(f"Total comments to analyze: {len(comments)}")
 
         texts = [
             c["snippet"]["topLevelComment"]["snippet"]["textDisplay"]
