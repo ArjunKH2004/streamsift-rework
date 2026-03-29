@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Footer() {
+  const router = useRouter();
   const [selectedPlatform, setSelectedPlatform] = useState("Select Platform");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [streamUrl, setStreamUrl] = useState("");
@@ -13,6 +15,15 @@ export default function Footer() {
     "Instagram Live",
     "TikTok Live"
   ];
+
+  const handleAnalyze = () => {
+    if (!streamUrl) {
+      alert("Please enter a stream URL");
+      return;
+    }
+    const platform = selectedPlatform === "Select Platform" ? "" : selectedPlatform.toLowerCase();
+    router.push(`/analyze?url=${encodeURIComponent(streamUrl)}${platform ? `&platform=${platform}` : ""}`);
+  };
 
   return (
     <footer className="relative py-12 sm:py-20 px-4 sm:px-6 bg-gradient-to-b from-black via-blue-900/20 to-blue-900/40">
@@ -39,6 +50,7 @@ export default function Footer() {
                   placeholder="Enter Stream URL"
                   value={streamUrl}
                   onChange={(e) => setStreamUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
                   className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-gray-800/60 border border-gray-600/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500/50 focus:bg-gray-800/80 transition-all font-gilroy text-sm sm:text-base"
                 />
               </div>
@@ -103,7 +115,10 @@ export default function Footer() {
             </div>
 
             {/* Analyze Button */}
-            <button className="w-full py-3 sm:py-4 px-6 sm:px-8 text-white font-bold text-base sm:text-lg hover:opacity-90 transition-opacity shadow-lg rounded bg-gradient-to-r from-cyan-400 via-purple-500 to-blue-600 font-gilroy">
+            <button 
+              onClick={handleAnalyze}
+              className="w-full py-3 sm:py-4 px-6 sm:px-8 text-white font-bold text-base sm:text-lg hover:opacity-90 transition-opacity shadow-lg rounded bg-gradient-to-r from-cyan-400 via-purple-500 to-blue-600 font-gilroy"
+            >
               Analyze my Stream
             </button>
           </div>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { ChevronDown, Check, Users, Eye, MessageCircle, Heart, Play, UserPlus, TrendingUp, Smile, Meh, Frown, ArrowUp, ArrowDown, Minus, Zap, BarChart3, Lightbulb } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { getVideoInfo, analyzeStatic, getLiveChatId, analyzeLive, connectTwitchChannel, disconnectTwitchChannel, getTwitchMessages, getTwitchAnalytics, getTwitchSuggestions, connectKickChannel, disconnectKickChannel, getKickMessages, getKickAnalytics, getKickSuggestions, getYouTubeSuggestions } from "@/app/services/api";
 
 import TwitchPlayer from "@/components/TwitchPlayer";
@@ -14,7 +15,8 @@ const platforms = [
     { id: "kick", name: "Kick" },
 ];
 
-export default function AnalyzePage() {
+function AnalyzeContent() {
+    const searchParams = useSearchParams();
     const [streamUrl, setStreamUrl] = useState("");
     const [selectedPlatform, setSelectedPlatform] = useState("");
     const [videoContext, setVideoContext] = useState("");
@@ -47,6 +49,9 @@ export default function AnalyzePage() {
         }
     }, [comments]);
 
+    // Check for query parameters on mount
+    const [hasAttemptedAutoAnalysis, setHasAttemptedAutoAnalysis] = useState(false);
+
     // Auto-detect platform from URL
     useEffect(() => {
         const url = streamUrl.toLowerCase();
@@ -58,6 +63,27 @@ export default function AnalyzePage() {
             setSelectedPlatform("kick");
         }
     }, [streamUrl]);
+
+    // Handle initial query params
+    useEffect(() => {
+        const urlParam = searchParams.get("url");
+        const platformParam = searchParams.get("platform");
+        
+        if (urlParam && !hasAttemptedAutoAnalysis) {
+            setStreamUrl(decodeURIComponent(urlParam));
+            if (platformParam) {
+                setSelectedPlatform(platformParam);
+            }
+            setHasAttemptedAutoAnalysis(true);
+        }
+    }, [searchParams, hasAttemptedAutoAnalysis]);
+
+    // Trigger analysis when params are set
+    useEffect(() => {
+        if (hasAttemptedAutoAnalysis && streamUrl && selectedPlatform && !isLoading && !analysis && !stats) {
+            handleAnalyze();
+        }
+    }, [hasAttemptedAutoAnalysis, streamUrl, selectedPlatform]);
 
     // Helper to calculate summary on client-side for YouTube Live
     const calculateSummary = (counts: any) => {
@@ -819,5 +845,20 @@ export default function AnalyzePage() {
                 </section>
             )}
         </main>
+    );
+}
+
+export default function AnalyzePage() {
+    return (
+        <Suspense fallback={
+            <main className="relative bg-black min-h-screen">
+                <Navigation />
+                <div className="flex items-center justify-center pt-32">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+                </div>
+            </main>
+        }>
+            <AnalyzeContent />
+        </Suspense>
     );
 }
