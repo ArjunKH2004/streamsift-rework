@@ -21,6 +21,20 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
+# ===== PICKLE PATCH FOR MISSING Vectorizer =====
+import sys
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+class tfIdfInheritVectorizer(TfidfVectorizer):
+    """Placeholder for the missing vectorizer class used during pickling."""
+    pass
+
+# Mock the module so pickle can find it
+import types
+mock_mod = types.ModuleType("tfIdfInheritVectorizer")
+mock_mod.tfIdfInheritVectorizer = tfIdfInheritVectorizer
+sys.modules["tfIdfInheritVectorizer"] = mock_mod
+
 # ===== SKLEARN MODEL SETUP =====
 # Using saved scikit-learn classifier and TF-IDF vectorizer
 
