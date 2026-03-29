@@ -13,6 +13,7 @@ const platforms = [
     { id: "twitch", name: "Twitch" },
     { id: "youtube", name: "YouTube" },
     { id: "kick", name: "Kick" },
+    { id: "yt-static", name: "YT-Static" },
 ];
 
 function AnalyzeContent() {
@@ -197,6 +198,40 @@ function AnalyzeContent() {
                     })));
                     getYouTubeSuggestions(staticAnalysis.counts, staticAnalysis.comments).then(setYtSuggestions).catch(() => {});
                 }
+            } else if (selectedPlatform === "yt-static") {
+                setTwitchConnected(false);
+                setTwitchChannel("");
+
+                let videoId = "";
+                const urlObj = new URL(streamUrl);
+                if (urlObj.hostname.includes("youtube.com")) {
+                    videoId = urlObj.searchParams.get("v") || "";
+                } else if (urlObj.hostname.includes("youtu.be")) {
+                    videoId = urlObj.pathname.slice(1);
+                }
+
+                if (!videoId) {
+                    alert("Invalid YouTube URL");
+                    setIsLoading(false);
+                    return;
+                }
+
+                setActiveVideoId(videoId);
+
+                const videoInfo = await getVideoInfo(videoId, "");
+                setStats(videoInfo);
+
+                // For YT-Static, we always use analyzeStatic with "all" (or a high limit)
+                const staticAnalysis = await analyzeStatic(videoId, "", "all", videoContext);
+                setAnalysis(staticAnalysis);
+                setComments(staticAnalysis.comments.map((c: any, i: number) => ({
+                    id: i,
+                    username: "Commenter",
+                    message: c.text,
+                    color: c.sentiment === "good" ? "#22C55E" : c.sentiment === "bad" ? "#EF4444" : "#8B5CF6"
+                })));
+                getYouTubeSuggestions(staticAnalysis.counts, staticAnalysis.comments).then(setYtSuggestions).catch(() => {});
+                
             } else if (selectedPlatform === "kick") {
                 const channel = extractKickChannel(streamUrl);
                 if (!channel) {
