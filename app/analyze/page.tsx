@@ -42,48 +42,8 @@ function AnalyzeContent() {
     const [kickAnalytics, setKickAnalytics] = useState<any>(null);
     const [kickSuggestions, setKickSuggestionsData] = useState<any>(null);
 
-    // Auto-scroll chat to bottom when new comments arrive
-    useEffect(() => {
-        if (chatContainerRef.current) {
-            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-        }
-    }, [comments]);
-
-    // Check for query parameters on mount
+    const [ytSuggestions, setYtSuggestions] = useState<any>(null);
     const [hasAttemptedAutoAnalysis, setHasAttemptedAutoAnalysis] = useState(false);
-
-    // Auto-detect platform from URL
-    useEffect(() => {
-        const url = streamUrl.toLowerCase();
-        if (url.includes("youtube.com") || url.includes("youtu.be")) {
-            setSelectedPlatform("youtube");
-        } else if (url.includes("twitch.tv")) {
-            setSelectedPlatform("twitch");
-        } else if (url.includes("kick.com")) {
-            setSelectedPlatform("kick");
-        }
-    }, [streamUrl]);
-
-    // Handle initial query params
-    useEffect(() => {
-        const urlParam = searchParams.get("url");
-        const platformParam = searchParams.get("platform");
-        
-        if (urlParam && !hasAttemptedAutoAnalysis) {
-            setStreamUrl(decodeURIComponent(urlParam));
-            if (platformParam) {
-                setSelectedPlatform(platformParam);
-            }
-            setHasAttemptedAutoAnalysis(true);
-        }
-    }, [searchParams, hasAttemptedAutoAnalysis]);
-
-    // Trigger analysis when params are set
-    useEffect(() => {
-        if (hasAttemptedAutoAnalysis && streamUrl && selectedPlatform && !isLoading && !analysis && !stats) {
-            handleAnalyze();
-        }
-    }, [hasAttemptedAutoAnalysis, streamUrl, selectedPlatform, handleAnalyze, isLoading, analysis, stats]);
 
     // Helper to calculate summary on client-side for YouTube Live
     const calculateSummary = useCallback((counts: any) => {
@@ -105,8 +65,6 @@ function AnalyzeContent() {
         if (pn > 60) return "Mostly neutral or chill atmosphere.";
         return "Mixed reactions with no dominant mood.";
     }, []);
-
-    const [ytSuggestions, setYtSuggestions] = useState<any>(null);
 
     const extractTwitchChannel = useCallback((url: string): string | null => {
         try {
@@ -157,7 +115,6 @@ function AnalyzeContent() {
 
         try {
             if (selectedPlatform === "twitch") {
-                // ===== TWITCH FLOW =====
                 const channel = extractTwitchChannel(streamUrl);
                 if (!channel) {
                     alert("Invalid Twitch URL or channel name");
@@ -165,14 +122,12 @@ function AnalyzeContent() {
                     return;
                 }
 
-                // Disconnect any previous connection
                 if (twitchChannel && twitchConnected) {
                     await disconnectTwitchChannel(twitchChannel).catch(() => { });
                 }
 
                 setTwitchChannel(channel);
 
-                // Connect to Twitch IRC
                 const result = await connectTwitchChannel(channel);
                 if (result.error) {
                     alert(`Twitch error: ${result.error}`);
@@ -181,10 +136,9 @@ function AnalyzeContent() {
                 }
 
                 setTwitchConnected(true);
-                setActiveVideoId(""); // Clear YouTube video
+                setActiveVideoId("");
                 setActiveLiveChatId(null);
 
-                // Set placeholder stats for Twitch
                 setStats({
                     title: `Twitch: ${channel}`,
                     views: "Live",
@@ -195,7 +149,6 @@ function AnalyzeContent() {
                 });
 
             } else if (selectedPlatform === "youtube") {
-                // ===== YOUTUBE FLOW (existing) =====
                 setTwitchConnected(false);
                 setTwitchChannel("");
 
@@ -242,11 +195,9 @@ function AnalyzeContent() {
                         message: c.text,
                         color: c.sentiment === "good" ? "#22C55E" : c.sentiment === "bad" ? "#EF4444" : "#8B5CF6"
                     })));
-                    // Fetch suggestions for static YouTube
                     getYouTubeSuggestions(staticAnalysis.counts, staticAnalysis.comments).then(setYtSuggestions).catch(() => {});
                 }
             } else if (selectedPlatform === "kick") {
-                // ===== KICK FLOW =====
                 const channel = extractKickChannel(streamUrl);
                 if (!channel) {
                     alert("Invalid Kick URL or channel name");
@@ -254,11 +205,9 @@ function AnalyzeContent() {
                     return;
                 }
 
-                // Disconnect any previous Kick connection
                 if (kickChannel && kickConnected) {
                     await disconnectKickChannel(kickChannel).catch(() => { });
                 }
-                // Also disconnect Twitch if active
                 if (twitchChannel && twitchConnected) {
                     await disconnectTwitchChannel(twitchChannel).catch(() => { });
                     setTwitchConnected(false);
@@ -267,14 +216,12 @@ function AnalyzeContent() {
 
                 setKickChannel(channel);
 
-                // Fetch chatroom_id from the browser (bypasses Cloudflare)
                 let chatroomId: string | undefined;
                 try {
                     const kickRes = await fetch(`https://kick.com/api/v2/channels/${channel}`);
                     if (kickRes.ok) {
                         const kickData = await kickRes.json();
                         chatroomId = kickData?.chatroom?.id?.toString();
-                        console.log(`Kick chatroom_id resolved from browser: ${chatroomId}`);
                     }
                 } catch (e) {
                     console.warn("Browser fetch of Kick API failed, backend will try its own strategies:", e);
@@ -316,6 +263,46 @@ function AnalyzeContent() {
             setIsLoading(false);
         }
     }, [streamUrl, selectedPlatform, videoContext, twitchChannel, twitchConnected, kickChannel, kickConnected, extractTwitchChannel, extractKickChannel]);
+
+    // Auto-scroll chat to bottom when new comments arrive
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+    }, [comments]);
+
+    // Auto-detect platform from URL
+    useEffect(() => {
+        const url = streamUrl.toLowerCase();
+        if (url.includes("youtube.com") || url.includes("youtu.be")) {
+            setSelectedPlatform("youtube");
+        } else if (url.includes("twitch.tv")) {
+            setSelectedPlatform("twitch");
+        } else if (url.includes("kick.com")) {
+            setSelectedPlatform("kick");
+        }
+    }, [streamUrl]);
+
+    // Handle initial query params
+    useEffect(() => {
+        const urlParam = searchParams.get("url");
+        const platformParam = searchParams.get("platform");
+        
+        if (urlParam && !hasAttemptedAutoAnalysis) {
+            setStreamUrl(decodeURIComponent(urlParam));
+            if (platformParam) {
+                setSelectedPlatform(platformParam);
+            }
+            setHasAttemptedAutoAnalysis(true);
+        }
+    }, [searchParams, hasAttemptedAutoAnalysis]);
+
+    // Trigger analysis when params are set
+    useEffect(() => {
+        if (hasAttemptedAutoAnalysis && streamUrl && selectedPlatform && !isLoading && !analysis && !stats) {
+            handleAnalyze();
+        }
+    }, [hasAttemptedAutoAnalysis, streamUrl, selectedPlatform, handleAnalyze, isLoading, analysis, stats]);
 
     // Poll for YouTube live chat messages every 2 seconds
     useEffect(() => {
