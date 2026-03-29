@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Triggering new build...
 # Exit on error
 set -o errexit
 
