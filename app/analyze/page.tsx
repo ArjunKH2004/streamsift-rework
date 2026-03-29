@@ -83,10 +83,10 @@ function AnalyzeContent() {
         if (hasAttemptedAutoAnalysis && streamUrl && selectedPlatform && !isLoading && !analysis && !stats) {
             handleAnalyze();
         }
-    }, [hasAttemptedAutoAnalysis, streamUrl, selectedPlatform]);
+    }, [hasAttemptedAutoAnalysis, streamUrl, selectedPlatform, handleAnalyze, isLoading, analysis, stats]);
 
     // Helper to calculate summary on client-side for YouTube Live
-    const calculateSummary = (counts: any) => {
+    const calculateSummary = useCallback((counts: any) => {
         if (!counts) return "";
         const g = counts.good || 0;
         const b = counts.bad || 0;
@@ -104,153 +104,11 @@ function AnalyzeContent() {
         if (pb > pg && pb > 30) return `Leaning negative (${pb.toFixed(1)}%). Improving sentiment...`;
         if (pn > 60) return "Mostly neutral or chill atmosphere.";
         return "Mixed reactions with no dominant mood.";
-    };
+    }, []);
 
     const [ytSuggestions, setYtSuggestions] = useState<any>(null);
 
-    // Poll for YouTube live chat messages every 2 seconds
-    useEffect(() => {
-        if (!activeLiveChatId) return;
-
-        const interval = setInterval(async () => {
-            try {
-                const liveData = await analyzeLive(activeLiveChatId, "", nextPageToken, videoContext);
-                if (liveData.messages && liveData.messages.length > 0) {
-                    const newComments = liveData.messages.map((m: any, i: number) => ({
-                        id: Date.now() + i,
-                        username: m.author || "Viewer",
-                        message: m.text,
-                        color: m.sentiment === "good" ? "#22C55E" : m.sentiment === "bad" ? "#EF4444" : "#8B5CF6"
-                    }));
-                    
-                    setComments(prev => {
-                        const updated = [...prev, ...newComments];
-                        return updated.slice(-200); // Keep last 200 for local context
-                    });
-
-                    setAnalysis((prev: any) => {
-                        const newCounts = {
-                            good: (prev?.counts?.good || 0) + (liveData.counts.good || 0),
-                            bad: (prev?.counts?.bad || 0) + (liveData.counts.bad || 0),
-                            neutral: (prev?.counts?.neutral || 0) + (liveData.counts.neutral || 0)
-                        };
-                        return {
-                            ...liveData,
-                            counts: newCounts,
-                            summary: calculateSummary(newCounts)
-                        };
-                    });
-
-                    // Fetch suggestions for YouTube every few batch updates
-                    if (Math.random() > 0.7) {
-                        getYouTubeSuggestions(analysis?.counts || liveData.counts, liveData.messages).then(setYtSuggestions).catch(() => {});
-                    }
-                }
-                if (liveData.nextPageToken) {
-                    setNextPageToken(liveData.nextPageToken);
-                }
-            } catch (error) {
-                console.error("Live chat poll error:", error);
-            }
-        }, 2000);
-
-        return () => clearInterval(interval);
-    }, [activeLiveChatId, nextPageToken, analysis?.counts]);
-
-
-    // Poll for Twitch chat messages every 2 seconds
-    useEffect(() => {
-        if (!twitchConnected || !twitchChannel) return;
-
-        const interval = setInterval(async () => {
-            try {
-                const data = await getTwitchMessages(twitchChannel);
-                if (data.messages && data.messages.length > 0) {
-                    const mapped = data.messages.map((m: any, i: number) => ({
-                        id: i,
-                        username: m.user || m.author || "Viewer",
-                        message: m.message,
-                        color: m.sentiment === "good" ? "#22C55E" : m.sentiment === "bad" ? "#EF4444" : "#8B5CF6"
-                    }));
-                    setComments(mapped);
-                    setAnalysis({ counts: data.counts, summary: "" });
-                }
-                const analytics = await getTwitchAnalytics(twitchChannel).catch(() => null);
-                if (analytics && !analytics.error) {
-                    setTwitchAnalytics(analytics);
-                    setAnalysis({
-                        counts: analytics.counts,
-                        summary: analytics.summary || ""
-                    });
-                }
-                const suggestions = await getTwitchSuggestions(twitchChannel).catch(() => null);
-                if (suggestions && !suggestions.error) {
-                    setTwitchSuggestionsData(suggestions);
-                }
-            } catch (error) {
-                console.error("Twitch poll error:", error);
-            }
-        }, 2000);
-
-        return () => clearInterval(interval);
-    }, [twitchConnected, twitchChannel]);
-
-    // Poll for Kick chat messages every 2 seconds
-    useEffect(() => {
-        if (!kickConnected || !kickChannel) return;
-
-        const interval = setInterval(async () => {
-            try {
-                const data = await getKickMessages(kickChannel);
-                if (data.messages && data.messages.length > 0) {
-                    const mapped = data.messages.map((m: any, i: number) => ({
-                        id: i,
-                        username: m.user || m.author || "Viewer",
-                        message: m.message,
-                        color: m.sentiment === "good" ? "#22C55E" : m.sentiment === "bad" ? "#EF4444" : "#8B5CF6"
-                    }));
-                    setComments(mapped);
-                    setAnalysis({ counts: data.counts, summary: "" });
-                }
-                const analytics = await getKickAnalytics(kickChannel).catch(() => null);
-                if (analytics && !analytics.error) {
-                    setKickAnalytics(analytics);
-                    setAnalysis({
-                        counts: analytics.counts,
-                        summary: analytics.summary || ""
-                    });
-                }
-                const suggestions = await getKickSuggestions(kickChannel).catch(() => null);
-                if (suggestions && !suggestions.error) {
-                    setKickSuggestionsData(suggestions);
-                }
-            } catch (error) {
-                console.error("Kick poll error:", error);
-            }
-        }, 2000);
-
-        return () => clearInterval(interval);
-    }, [kickConnected, kickChannel]);
-
-    // Disconnect Twitch on unmount
-    useEffect(() => {
-        return () => {
-            if (twitchChannel && twitchConnected) {
-                disconnectTwitchChannel(twitchChannel).catch(() => { });
-            }
-        };
-    }, [twitchChannel, twitchConnected]);
-
-    // Disconnect Kick on unmount
-    useEffect(() => {
-        return () => {
-            if (kickChannel && kickConnected) {
-                disconnectKickChannel(kickChannel).catch(() => { });
-            }
-        };
-    }, [kickChannel, kickConnected]);
-
-    const extractTwitchChannel = (url: string): string | null => {
+    const extractTwitchChannel = useCallback((url: string): string | null => {
         try {
             if (!url.includes("/") && !url.includes(".")) {
                 return url.trim().toLowerCase();
@@ -264,9 +122,9 @@ function AnalyzeContent() {
             return url.trim().toLowerCase() || null;
         }
         return null;
-    };
+    }, []);
 
-    const extractKickChannel = (url: string): string | null => {
+    const extractKickChannel = useCallback((url: string): string | null => {
         try {
             if (!url.includes("/") && !url.includes(".")) {
                 return url.trim().toLowerCase();
@@ -280,9 +138,9 @@ function AnalyzeContent() {
             return url.trim().toLowerCase() || null;
         }
         return null;
-    };
+    }, []);
 
-    const handleAnalyze = async () => {
+    const handleAnalyze = useCallback(async () => {
         if (!streamUrl || !selectedPlatform) {
             alert("Please fill in all fields (URL and Platform)");
             return;
@@ -457,7 +315,150 @@ function AnalyzeContent() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [streamUrl, selectedPlatform, videoContext, twitchChannel, twitchConnected, kickChannel, kickConnected, extractTwitchChannel, extractKickChannel]);
+
+    // Poll for YouTube live chat messages every 2 seconds
+    useEffect(() => {
+        if (!activeLiveChatId) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const liveData = await analyzeLive(activeLiveChatId, "", nextPageToken, videoContext);
+                if (liveData.messages && liveData.messages.length > 0) {
+                    const newComments = liveData.messages.map((m: any, i: number) => ({
+                        id: Date.now() + i,
+                        username: m.author || "Viewer",
+                        message: m.text,
+                        color: m.sentiment === "good" ? "#22C55E" : m.sentiment === "bad" ? "#EF4444" : "#8B5CF6"
+                    }));
+                    
+                    setComments(prev => {
+                        const updated = [...prev, ...newComments];
+                        return updated.slice(-200); // Keep last 200 for local context
+                    });
+
+                    setAnalysis((prev: any) => {
+                        const newCounts = {
+                            good: (prev?.counts?.good || 0) + (liveData.counts.good || 0),
+                            bad: (prev?.counts?.bad || 0) + (liveData.counts.bad || 0),
+                            neutral: (prev?.counts?.neutral || 0) + (liveData.counts.neutral || 0)
+                        };
+                        return {
+                            ...liveData,
+                            counts: newCounts,
+                            summary: calculateSummary(newCounts)
+                        };
+                    });
+
+                    // Fetch suggestions for YouTube every few batch updates
+                    if (Math.random() > 0.7) {
+                        getYouTubeSuggestions(analysis?.counts || liveData.counts, liveData.messages).then(setYtSuggestions).catch(() => {});
+                    }
+                }
+                if (liveData.nextPageToken) {
+                    setNextPageToken(liveData.nextPageToken);
+                }
+            } catch (error) {
+                console.error("Live chat poll error:", error);
+            }
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, [activeLiveChatId, nextPageToken, analysis?.counts, videoContext, calculateSummary]);
+
+
+    // Poll for Twitch chat messages every 2 seconds
+    useEffect(() => {
+        if (!twitchConnected || !twitchChannel) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const data = await getTwitchMessages(twitchChannel);
+                if (data.messages && data.messages.length > 0) {
+                    const mapped = data.messages.map((m: any, i: number) => ({
+                        id: i,
+                        username: m.user || m.author || "Viewer",
+                        message: m.message,
+                        color: m.sentiment === "good" ? "#22C55E" : m.sentiment === "bad" ? "#EF4444" : "#8B5CF6"
+                    }));
+                    setComments(mapped);
+                    setAnalysis({ counts: data.counts, summary: "" });
+                }
+                const analytics = await getTwitchAnalytics(twitchChannel).catch(() => null);
+                if (analytics && !analytics.error) {
+                    setTwitchAnalytics(analytics);
+                    setAnalysis({
+                        counts: analytics.counts,
+                        summary: analytics.summary || ""
+                    });
+                }
+                const suggestions = await getTwitchSuggestions(twitchChannel).catch(() => null);
+                if (suggestions && !suggestions.error) {
+                    setTwitchSuggestionsData(suggestions);
+                }
+            } catch (error) {
+                console.error("Twitch poll error:", error);
+            }
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, [twitchConnected, twitchChannel]);
+
+    // Poll for Kick chat messages every 2 seconds
+    useEffect(() => {
+        if (!kickConnected || !kickChannel) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const data = await getKickMessages(kickChannel);
+                if (data.messages && data.messages.length > 0) {
+                    const mapped = data.messages.map((m: any, i: number) => ({
+                        id: i,
+                        username: m.user || m.author || "Viewer",
+                        message: m.message,
+                        color: m.sentiment === "good" ? "#22C55E" : m.sentiment === "bad" ? "#EF4444" : "#8B5CF6"
+                    }));
+                    setComments(mapped);
+                    setAnalysis({ counts: data.counts, summary: "" });
+                }
+                const analytics = await getKickAnalytics(kickChannel).catch(() => null);
+                if (analytics && !analytics.error) {
+                    setKickAnalytics(analytics);
+                    setAnalysis({
+                        counts: analytics.counts,
+                        summary: analytics.summary || ""
+                    });
+                }
+                const suggestions = await getKickSuggestions(kickChannel).catch(() => null);
+                if (suggestions && !suggestions.error) {
+                    setKickSuggestionsData(suggestions);
+                }
+            } catch (error) {
+                console.error("Kick poll error:", error);
+            }
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, [kickConnected, kickChannel]);
+
+    // Disconnect Twitch on unmount
+    useEffect(() => {
+        return () => {
+            if (twitchChannel && twitchConnected) {
+                disconnectTwitchChannel(twitchChannel).catch(() => { });
+            }
+        };
+    }, [twitchChannel, twitchConnected]);
+
+    // Disconnect Kick on unmount
+    useEffect(() => {
+        return () => {
+            if (kickChannel && kickConnected) {
+                disconnectKickChannel(kickChannel).catch(() => { });
+            }
+        };
+    }, [kickChannel, kickConnected]);
+
 
     const selectedPlatformName =
         platforms.find((p) => p.id === selectedPlatform)?.name || "Select Platform";

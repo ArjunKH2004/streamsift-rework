@@ -1,0 +1,14 @@
+flask
+google-api-python-client
+textblob
+pandas
+nltk
+flask-cors
+flask-socketio
+scikit-learn
+google-generativeai
+eventlet
+gunicorn
+python-dotenv
+requests
+pusher
