@@ -1,11 +1,27 @@
+import os
 import sys
-sys.path.insert(0, r'C:\Users\Lenovo\streamsift\backend')
 import pickle
 import warnings
+import types
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+# Patch for missing vectorizer class
+class tfIdfInheritVectorizer(TfidfVectorizer):
+    pass
+
+mock_mod = types.ModuleType("tfIdfInheritVectorizer")
+mock_mod.tfIdfInheritVectorizer = tfIdfInheritVectorizer
+sys.modules["tfIdfInheritVectorizer"] = mock_mod
+
 warnings.filterwarnings('ignore')
 
-m = pickle.load(open(r'C:\Users\Lenovo\Downloads\yt_ai_classifier_model_2.sav','rb'))
-v = pickle.load(open(r'C:\Users\Lenovo\Downloads\tfidf_vectorizer.sav','rb'))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+m_path = os.path.join(BASE_DIR, 'yt_ai_classifier_model_2.sav')
+v_path = os.path.join(BASE_DIR, 'tfidf_vectorizer.sav')
+
+print(f"Testing model loading from: {BASE_DIR}")
+m = pickle.load(open(m_path, 'rb'))
+v = pickle.load(open(v_path, 'rb'))
 
 tests = [
     'This is amazing and wonderful!',

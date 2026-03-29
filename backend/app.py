@@ -21,25 +21,18 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-# ===== PICKLE PATCH FOR MISSING Vectorizer =====
-import sys
-from sklearn.feature_extraction.text import TfidfVectorizer
-
-class tfIdfInheritVectorizer(TfidfVectorizer):
-    """Placeholder for the missing vectorizer class used during pickling."""
-    pass
-
-# Mock the module so pickle can find it
-import types
-mock_mod = types.ModuleType("tfIdfInheritVectorizer")
-mock_mod.tfIdfInheritVectorizer = tfIdfInheritVectorizer
-sys.modules["tfIdfInheritVectorizer"] = mock_mod
-
 # ===== SKLEARN MODEL SETUP =====
-# Using saved scikit-learn classifier and TF-IDF vectorizer
-
 import os
+import sys
+import pickle
+import traceback
+
+# Ensure root (where tfIdfInheritVectorizer.py is) is in path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(BASE_DIR)
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
 MODEL_PATH = os.environ.get("MODEL_PATH", os.path.join(BASE_DIR, "yt_ai_classifier_model_2.sav"))
 VECTORIZER_PATH = os.environ.get("VECTORIZER_PATH", os.path.join(BASE_DIR, "tfidf_vectorizer.sav"))
 
@@ -48,16 +41,30 @@ VECTORIZER_PATH = os.environ.get("VECTORIZER_PATH", os.path.join(BASE_DIR, "tfid
 id2label = {0: "bad", 1: "neutral", 2: "good"}
 
 # ===== LOAD MODEL =====
+model = None
+vectorizer = None
+
 try:
     print(f"Loading classifier from: {MODEL_PATH}")
-    with open(MODEL_PATH, 'rb') as f:
-        model = pickle.load(f)
+    if os.path.exists(MODEL_PATH):
+        with open(MODEL_PATH, 'rb') as f:
+            model = pickle.load(f)
+    else:
+        print(f"ERROR: Model file not found at {MODEL_PATH}")
+
     print(f"Loading vectorizer from: {VECTORIZER_PATH}")
-    with open(VECTORIZER_PATH, 'rb') as f:
-        vectorizer = pickle.load(f)
-    print("Models loaded successfully!")
+    if os.path.exists(VECTORIZER_PATH):
+        with open(VECTORIZER_PATH, 'rb') as f:
+            # This requires 'tfIdfInheritVectorizer' module to be available in sys.path
+            vectorizer = pickle.load(f)
+    else:
+        print(f"ERROR: Vectorizer file not found at {VECTORIZER_PATH}")
+
+    if model and vectorizer:
+        print("Models loaded successfully!")
 except Exception as e:
     print(f"Error loading models: {e}")
+    traceback.print_exc()
     model = None
     vectorizer = None
 
@@ -203,7 +210,7 @@ def summarize(counts):
 
 # ===== API KEYS =====
 # YouTube Data API v3
-YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "AIzaSyDXb363rfgIBPginu9gwa3TpP5gNqemMPc")
+YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "AIzaSyB-kZZzAsasrRK3OVOmg0id8cDiAx_wItE")
 
 # Gemini API Key (free from https://ai.google.dev)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyDHQnizSt0rJgHYRRa6Pe4PybUZpDK62ec")
