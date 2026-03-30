@@ -13,7 +13,6 @@ const platforms = [
     { id: "twitch", name: "Twitch" },
     { id: "youtube", name: "YouTube" },
     { id: "kick", name: "Kick" },
-    { id: "yt-static", name: "YT-Static" },
 ];
 
 function AnalyzeContent() {
@@ -45,6 +44,7 @@ function AnalyzeContent() {
 
     const [ytSuggestions, setYtSuggestions] = useState<any>(null);
     const [hasAttemptedAutoAnalysis, setHasAttemptedAutoAnalysis] = useState(false);
+    const [modalData, setModalData] = useState<{ title: string; value: string } | null>(null);
 
     // Helper to calculate summary on client-side for YouTube Live
     const calculateSummary = useCallback((counts: any) => {
@@ -207,49 +207,6 @@ function AnalyzeContent() {
                         getYouTubeSuggestions(staticAnalysis.counts, staticAnalysis.comments).then(setYtSuggestions).catch(() => {});
                     }
                 }
-            } else if (selectedPlatform === "yt-static") {
-                setTwitchConnected(false);
-                setTwitchChannel("");
-
-                let videoId = "";
-                const urlObj = new URL(streamUrl);
-                if (urlObj.hostname.includes("youtube.com")) {
-                    videoId = urlObj.searchParams.get("v") || "";
-                } else if (urlObj.hostname.includes("youtu.be")) {
-                    videoId = urlObj.pathname.slice(1);
-                }
-
-                if (!videoId) {
-                    alert("Invalid YouTube URL");
-                    setIsLoading(false);
-                    return;
-                }
-
-                setActiveVideoId(videoId);
-
-                const videoInfo = await getVideoInfo(videoId, "");
-                setStats(videoInfo);
-
-                // For YT-Static, we always use analyzeStatic with "all" (or a high limit)
-                const staticAnalysis = await analyzeStatic(videoId, "", "all", videoContext);
-                setAnalysis(staticAnalysis);
-
-                if (staticAnalysis.error) {
-                    alert(`Analysis error: ${staticAnalysis.error}`);
-                    setIsLoading(false);
-                    return;
-                }
-
-                if (staticAnalysis.comments) {
-                    setComments(staticAnalysis.comments.map((c: any, i: number) => ({
-                        id: i,
-                        username: "Commenter",
-                        message: c.text,
-                        color: c.sentiment === "good" ? "#22C55E" : c.sentiment === "bad" ? "#EF4444" : "#8B5CF6"
-                    })));
-                    getYouTubeSuggestions(staticAnalysis.counts, staticAnalysis.comments).then(setYtSuggestions).catch(() => {});
-                }
-                
             } else if (selectedPlatform === "kick") {
                 const channel = extractKickChannel(streamUrl);
                 if (!channel) {
@@ -512,10 +469,19 @@ function AnalyzeContent() {
 
     const isTwitchMode = selectedPlatform === "twitch" && twitchConnected;
     const isKickMode = selectedPlatform === "kick" && kickConnected;
-    const isLiveMode = isTwitchMode || isKickMode;
-    const liveAnalytics = isTwitchMode ? twitchAnalytics : isKickMode ? kickAnalytics : null;
-    const liveSuggestions = isTwitchMode ? twitchSuggestions : isKickMode ? kickSuggestions : null;
-    const liveChannel = isTwitchMode ? twitchChannel : isKickMode ? kickChannel : "";
+    const isLiveMode = isTwitchMode || isKickMode || !!activeLiveChatId;
+    
+    const liveAnalytics = isTwitchMode ? twitchAnalytics : isKickMode ? kickAnalytics : activeLiveChatId ? {
+        total_messages: (analysis?.counts?.good || 0) + (analysis?.counts?.bad || 0) + (analysis?.counts?.neutral || 0),
+        stream_score: analysis?.stream_score || 50,
+        mood: analysis?.summary ? "Analyzing..." : "Waiting...",
+        top_user: analysis?.top_user || "—",
+        top_chat: analysis?.top_message || "—",
+        keywords: analysis?.keywords || []
+    } : null;
+    
+    const liveSuggestions = isTwitchMode ? twitchSuggestions : isKickMode ? kickSuggestions : activeLiveChatId ? ytSuggestions : null;
+    const liveChannel = isTwitchMode ? twitchChannel : isKickMode ? kickChannel : activeVideoId || "";
 
     return (
         <main className="relative bg-black min-h-screen">
@@ -729,41 +695,59 @@ function AnalyzeContent() {
                                 <h3 className="text-white text-lg font-bold">Stream Insights: {stats.title}</h3>
                             </div>
 
-                            {isLiveMode && liveAnalytics ? (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+                            {isLiveMode ? (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-6">
                                     <div className="text-center">
                                         <div className="flex items-center justify-center gap-2 mb-2">
                                             <MessageCircle className="w-5 h-5 text-cyan-400" />
-                                            <span className="text-white text-2xl font-bold">{liveAnalytics.total_messages || 0}</span>
+                                            <span className="text-white text-2xl font-bold">{liveAnalytics?.total_messages || 0}</span>
                                         </div>
                                         <p className="text-gray-500 text-xs">Messages</p>
                                     </div>
                                     <div className="text-center">
                                         <div className="flex items-center justify-center gap-2 mb-2">
                                             <Zap className="w-5 h-5 text-yellow-400" />
-                                            <span className="text-white text-2xl font-bold">{liveAnalytics.stream_score || 50}</span>
+                                            <span className="text-white text-2xl font-bold">{liveAnalytics?.stream_score || 50}</span>
                                         </div>
-                                        <p className="text-gray-500 text-xs">Stream Score</p>
+                                        <p className="text-gray-500 text-xs">Score</p>
                                     </div>
-                                    <div className="text-center">
+                                    <div className="text-center cursor-pointer hover:bg-white/5 transition-colors p-2 rounded-lg" onClick={() => setModalData({ title: "Current Mood", value: liveAnalytics?.mood || "Analyzing..." })}>
                                         <div className="flex items-center justify-center gap-2 mb-2">
                                             <Smile className="w-5 h-5 text-green-400" />
-                                            <span className="text-white text-2xl font-bold">{liveAnalytics.mood || "—"}</span>
+                                            <span className="text-white text-base font-bold truncate max-w-[100px]">{liveAnalytics?.mood || "Analyzing..."}</span>
                                         </div>
-                                        <p className="text-gray-500 text-xs">Chat Mood</p>
+                                        <p className="text-gray-500 text-xs text-center">Mood</p>
                                     </div>
-                                    <div className="text-center">
+                                    <div className="text-center cursor-pointer hover:bg-white/5 transition-colors p-2 rounded-lg" onClick={() => setModalData({ title: "Most Active User", value: liveAnalytics?.top_user || "Analyzing..." })}>
                                         <div className="flex items-center justify-center gap-2 mb-2">
-                                            <BarChart3 className="w-5 h-5 text-purple-400" />
-                                            <span className="text-white text-2xl font-bold">
-                                                {liveAnalytics.keywords && liveAnalytics.keywords.length > 0 ? liveAnalytics.keywords[0][0] : "—"}
+                                            <UserPlus className="w-5 h-5 text-pink-400" />
+                                            <span className="text-white text-base font-bold truncate max-w-[100px]" title={liveAnalytics?.top_user}>
+                                                {liveAnalytics?.top_user || "Analyzing..."}
                                             </span>
                                         </div>
-                                        <p className="text-gray-500 text-xs">Top Keyword</p>
+                                        <p className="text-gray-500 text-xs text-center">Top User</p>
+                                    </div>
+                                    <div className="text-center cursor-pointer hover:bg-white/5 transition-colors p-2 rounded-lg" onClick={() => setModalData({ title: "Trending Message", value: liveAnalytics?.top_chat || "Analyzing..." })}>
+                                        <div className="flex items-center justify-center gap-2 mb-2">
+                                            <MessageCircle className="w-5 h-5 text-blue-400" />
+                                            <span className="text-white text-base font-bold truncate max-w-[100px]" title={liveAnalytics?.top_chat}>
+                                                {liveAnalytics?.top_chat || "Analyzing..."}
+                                            </span>
+                                        </div>
+                                        <p className="text-gray-500 text-xs text-center">Top Chat</p>
+                                    </div>
+                                    <div className="text-center cursor-pointer hover:bg-white/5 transition-colors p-2 rounded-lg" onClick={() => setModalData({ title: "Top Keyword", value: (liveAnalytics?.keywords && liveAnalytics?.keywords.length > 0 ? liveAnalytics?.keywords[0][0] : "Analyzing...") })}>
+                                        <div className="flex items-center justify-center gap-2 mb-2">
+                                            <BarChart3 className="w-5 h-5 text-purple-400" />
+                                            <span className="text-white text-base font-bold truncate max-w-[100px]">
+                                                {liveAnalytics?.keywords && liveAnalytics?.keywords.length > 0 ? liveAnalytics?.keywords[0][0] : "Analyzing..."}
+                                            </span>
+                                        </div>
+                                        <p className="text-gray-500 text-xs text-center">Keyword</p>
                                     </div>
                                     <div className="text-center">
                                         <div className="flex items-center justify-center gap-2 mb-2">
-                                            <Users className="w-5 h-5 text-blue-400" />
+                                            <Users className="w-5 h-5 text-orange-400" />
                                             <span className="text-white text-2xl font-bold">Live</span>
                                         </div>
                                         <p className="text-gray-500 text-xs">Status</p>
@@ -774,14 +758,14 @@ function AnalyzeContent() {
                                     <div className="text-center">
                                         <div className="flex items-center justify-center gap-2 mb-2">
                                             <Eye className="w-5 h-5 text-blue-400" />
-                                            <span className="text-white text-2xl font-bold">{stats.views !== "Live" ? parseInt(stats.views).toLocaleString() : "Live"}</span>
+                                            <span className="text-white text-2xl font-bold">{stats?.views !== "Live" ? parseInt(stats?.views || "0").toLocaleString() : "Live"}</span>
                                         </div>
                                         <p className="text-gray-500 text-xs">Total Views</p>
                                     </div>
                                     <div className="text-center">
                                         <div className="flex items-center justify-center gap-2 mb-2">
                                             <Heart className="w-5 h-5 text-pink-400" />
-                                            <span className="text-white text-2xl font-bold">{stats.likes !== "-" ? parseInt(stats.likes).toLocaleString() : "-"}</span>
+                                            <span className="text-white text-2xl font-bold">{stats?.likes !== "-" ? parseInt(stats?.likes || "0").toLocaleString() : "-"}</span>
                                         </div>
                                         <p className="text-gray-500 text-xs">Likes</p>
                                     </div>
@@ -789,7 +773,7 @@ function AnalyzeContent() {
                                     <div className="text-center">
                                         <div className="flex items-center justify-center gap-2 mb-2">
                                             <MessageCircle className="w-5 h-5 text-cyan-400" />
-                                            <span className="text-white text-2xl font-bold">{parseInt(stats.comments).toLocaleString()}</span>
+                                            <span className="text-white text-2xl font-bold">{parseInt(stats?.comments || "0").toLocaleString()}</span>
                                         </div>
                                         <p className="text-gray-500 text-xs">Comments</p>
                                     </div>
@@ -884,6 +868,44 @@ function AnalyzeContent() {
 
                     </div>
                 </section>
+            )}
+
+            {/* Modal for Stat Details */}
+            {modalData && (
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md bg-black/60"
+                    onClick={() => setModalData(null)}
+                >
+                    <div 
+                        className="bg-[#1a1a1a] border border-gray-800 rounded-2xl p-8 max-w-lg w-full shadow-2xl relative"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button 
+                            onClick={() => setModalData(null)}
+                            className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                        
+                        <h3 className="text-gray-400 text-sm font-medium mb-2 uppercase tracking-wider">{modalData.title}</h3>
+                        <div className="h-[2px] w-12 bg-purple-500 mb-6 rounded-full"></div>
+                        
+                        <p className="text-white text-xl sm:text-2xl font-bold leading-relaxed break-words">
+                            {modalData.value}
+                        </p>
+                        
+                        <div className="mt-8 flex justify-end">
+                            <button 
+                                onClick={() => setModalData(null)}
+                                className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-all shadow-lg shadow-purple-600/20"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </main>
     );

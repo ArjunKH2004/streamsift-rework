@@ -143,12 +143,102 @@ def predict_batch(texts, batch_size=16):
     
     return results
 
+
+# ===== SENTIMENT CLASSIFICATION (VMAX Enhanced) =====
+SLANG = {
+    r'\bpog\b|\bpoggers\b|\bpogchamp\b': 'amazing',
+    r'\bgg\b|\bggwp\b': 'great game',
+    r'\bkekw\b|\blul\b|\blmaooo+\b': 'laughing funny',
+    r'\bcopium\b': 'coping disappointed',
+    r'\bhopium\b': 'hoping optimistic',
+    r'\bsadge\b': 'sad disappointed',
+    r'\bbased\b': 'respectable good',
+    r'\bcringe\b': 'embarrassing bad',
+    r'\bratio\b': 'disagreeing wrong',
+    r'\bsheesh\b|\bsheeesh\b': 'impressive amazing',
+    r'\bw\b(?!\w)': 'win',
+    r'\bl\b(?!\w)': 'loss fail',
+    r'\bngl\b': 'honestly',
+    r'\bfrfr\b': 'seriously',
+    r'\bno cap\b': 'honestly seriously',
+    r'\bslay\b': 'excellent amazing',
+    r'\bnpc\b': 'boring fake',
+    r'\bmonkas\b|\bmonkaw\b': 'nervous scared',
+}
+
+TWITCH_EMOTES = {
+    "PogChamp": "😲", "Pog": "😲", "Poggers": "😲",
+    "Kappa": "😏", "KappaPride": "🏳️‍🌈",
+    "LUL": "😂", "KEKW": "🤣", "OMEGALUL": "🤣",
+    "BibleThump": "😭", "Sadge": "😢",
+    "residentsleeper": "😴", "HeyGuys": "👋",
+    "NotLikeThis": "🤦", "WutFace": "😱",
+    "CoolStoryBob": "🙄", "SeemsGood": "👍",
+    "KomodoHype": "🦎", "Prayge": "🙏", "Copium": "🧪",
+}
+
+def transform_emotes(text):
+    # Handle Bit Cheers (Cheer1, Cheer100, etc)
+    text = re.sub(r'\bcheer\d+\b', '💎', text, flags=re.IGNORECASE)
+    # Handle basic Twitch emotes
+    for code, emoji in TWITCH_EMOTES.items():
+        text = re.sub(rf'\b{code}\b', emoji, text)
+    return text
+
+def expand_slang(text):
+    text = text.lower()
+    for pat, rep in SLANG.items():
+        text = re.sub(pat, rep, text)
+    return text
+
 def classify_simple(text):
-    """Simple TextBlob-based sentiment for live chat (faster than ML model)."""
-    p = TextBlob(text).sentiment.polarity
-    if p > 0.1: return "good"
-    if p < -0.1: return "bad"
+    if not text: return "neutral"
+    clean = text.strip()
+    if re.match(r'^[!@/]\w*$', clean) or re.match(r'^\d+$', clean) or len(clean) < 2:
+        return "neutral"
+    expanded = expand_slang(clean)
+    positive_words = {'amazing','great','love','best','awesome','perfect','incredible','wonderful'}
+    if clean.isupper() and len(clean.split()) > 1:
+        if any(w in expanded for w in positive_words):
+            expanded = "not " + expanded
+    blob = TextBlob(expanded)
+    p = blob.sentiment.polarity
+    if p > 0.05: return "good"
+    if p < -0.05: return "bad"
     return "neutral"
+
+def get_msg_intent(text):
+    text = text.lower()
+    if "?" in text: return "questioning"
+    if any(w in text for w in ["lag", "fix", "scam", "audio", "broken", "help"]): return "complaint"
+    if any(w in text for w in ["bad", "l", "cringe", "boring", "ratio", "worst"]): return "criticism"
+    if any(w in text for w in ["toxic", "stfu", "hate", "kys", "trash"]): return "toxic"
+    return None
+
+def calculate_stream_mood(messages):
+    if not messages: return "Neutral ⚪"
+    total = len(messages)
+    counts = Counter([m.get("intent") for m in messages if m.get("intent")])
+    sentiments = Counter([m.get("sentiment") for m in messages])
+    
+    # Ratios
+    pq = (counts.get("questioning", 0) / total) * 100
+    pcomp = (counts.get("complaint", 0) / total) * 100
+    pcrit = (counts.get("criticism", 0) / total) * 100
+    ptox = (counts.get("toxic", 0) / total) * 100
+    pgood = (sentiments.get("good", 0) / total) * 100
+    pbad = (sentiments.get("bad", 0) / total) * 100
+
+    # Heuristics
+    if ptox > 15: return "Hatred/Toxic 🤬"
+    if pq > 20: return "Questioning 🧐"
+    if pcomp > 15: return "Complaint 😤"
+    if pcrit > 25: return "Criticism 😠"
+    if pgood > 65: return "Happy/Hype 🔥"
+    if pbad > 40: return "Toxic 😡"
+    if pgood > 45: return "Positive 🙂"
+    if ptox > 5: return "Tense 😤"
+    return "Chill 😌"
 
 def gemini_batch_classify(texts, context, batch_size=30):
     """Use Gemini AI to classify comments relative to the video context.
@@ -490,26 +580,148 @@ def detect_spam(message):
         return True
     return False
 
-def extract_keywords(messages, top_n=10):
-    """Extract meaningful keywords from chat messages."""
-    all_text = " ".join([m['message'].lower() for m in messages])
-    stop_words = {
-        'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-        'of', 'with', 'is', 'are', 'was', 'were', 'been', 'be', 'have', 'has',
-        'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may',
-        'might', 'must', 'can', 'this', 'that', 'these', 'those', 'i', 'you',
-        'he', 'she', 'it', 'we', 'they', 'my', 'your', 'his', 'her', 'its',
-        'lol', 'lmao', 'omg', 'wtf', 'kek', 'pog', 'poggers', 'pepega', 'lul',
-        'kekw', 'monka', 'copium', 'hopium', 'sadge', 'pepe', 'chat', 'streamer',
-        'like', 'just', 'really', 'very', 'get', 'got', 'going', 'know', 'think',
-        'want', 'said', 'see', 'look', 'good', 'bad', 'nice', 'wow', 'yeah',
-        'nah', 'yep', 'sure', 'okay', 'yes', 'www', 'ggs', 'gg', 'ez'
+# ===== ADVANCED ANALYTICS (from VMAX) =====
+STOP_WORDS = {
+    'the','a','an','and','or','but','in','on','at','to','for','of','with',
+    'is','are','was','were','been','be','have','has','had','do','does','did',
+    'will','would','should','could','may','might','must','can','shall',
+    'this','that','these','those','here','there','where','when','why','how',
+    'what','who','which','all','any','each','every','both','few','more',
+    'most','other','some','such','no','not','only','same','so','than','too',
+    'very','just','then','now','also','about','after','before','up','out',
+    'if','its','into','through','during','until','against','nor','as',
+    'from','by','between','i','you','he','she','it','we','they','me','him',
+    'her','us','them','my','your','his','our','their','mine','yours','hers',
+    'ours','myself','yourself','himself','herself','itself','themselves',
+}
+
+TOPIC_SIGNALS = {
+    'clutch','aimbot','headshot','wallhack','rank','ranked','queue','match',
+    'gameplay','clip','highlight','moment','replay','vod','raid','sub',
+    'subbed','bits','donation','donated','merch','sponsor','crying','screaming',
+    'insane','crazy','incredible','impressive','hilarious','terrible','awful',
+    'disgusting','perfect','impossible','destroyed','dominated','stomped',
+    'carried','choking','setup','fps','ping','lag','stutter','freeze','crash',
+    'audio','mic','camera','overlay','discord','reddit','twitter','youtube',
+    'tiktok','champion','victory','defeat','round','tournament','scrim','warmup',
+}
+
+def extract_keywords(messages, top_n=10, exclude_words=None):
+    if not messages: return []
+    if exclude_words is None: exclude_words = set()
+    else: exclude_words = set(w.lower() for w in exclude_words)
+    
+    url_pattern = r'https?://\S+|www\.\S+'
+    url_fragments = {'www', 'http', 'https', 'com', 'net', 'org', 'html', 'php', 'twitch', 'youtube', 'kick'}
+    skip = STOP_WORDS | url_fragments | exclude_words
+    
+    texts = [re.sub(url_pattern, '', m['message'].lower()) for m in messages]
+    all_text = " ".join(texts)
+    
+    words = re.findall(r"\b[a-z][a-z']{2,}\b", all_text)
+    words = [w for w in words if w not in skip]
+    word_freq = Counter(words)
+    
+    bigram_freq = Counter()
+    for text in texts:
+        toks = [w for w in re.findall(r"\b[a-z][a-z']{2,}\b", text) if w not in skip]
+        for i in range(len(toks) - 1):
+            bigram_freq[f"{toks[i]} {toks[i+1]}"] += 1
+            
+    scored = {}
+    for word, count in word_freq.items():
+        if count < 2: continue
+        scored[word] = count * (1.5 if word in TOPIC_SIGNALS else 1.0)
+    for bigram, count in bigram_freq.items():
+        if count < 2: continue
+        w1, w2 = bigram.split()
+        scored[bigram] = count * (2.0 if (w1 in TOPIC_SIGNALS or w2 in TOPIC_SIGNALS) else 1.3)
+        
+    ranked = sorted(scored.items(), key=lambda x: x[1], reverse=True)
+    final = []
+    covered = set()
+    for term, score in ranked:
+        parts = set(term.split())
+        if parts & covered: continue
+        final.append((term, int(score)))
+        covered.update(parts)
+        if len(final) >= top_n: break
+    return final
+
+def analyse_sentiment_patterns(messages):
+    if len(messages) < 3:
+        return {"velocity": "stable", "intensity": "low", "engagement_pattern": "warming up", "top_user": "N/A", "top_message": "N/A", "delta": 0}
+    
+    total = len(messages)
+    third = max(1, total // 3)
+    early = messages[:third]
+    recent = messages[-third:]
+    
+    def pos_ratio(msgs):
+        if not msgs: return 0.5
+        return sum(1 for m in msgs if m.get('sentiment') == 'good') / len(msgs)
+        
+    early_pos = pos_ratio(early)
+    recent_pos = pos_ratio(recent)
+    delta = recent_pos - early_pos
+    
+    velocity = "stable"
+    if delta > 0.15: velocity = "rapidly improving"
+    elif delta > 0.05: velocity = "slowly improving"
+    elif delta < -0.15: velocity = "rapidly declining"
+    elif delta < -0.05: velocity = "slowly declining"
+    
+    emotional = [m for m in messages if m.get('sentiment') != 'neutral']
+    avg_conf = (sum(m.get('confidence', 0.7) for m in emotional) / len(emotional)) if emotional else 0.5
+    
+    intensity = "moderate"
+    if avg_conf > 0.85: intensity = "very high"
+    elif avg_conf > 0.75: intensity = "high"
+    elif avg_conf < 0.65: intensity = "low"
+    
+    from collections import defaultdict
+    user_scores = defaultdict(int)
+    last_msgs = {} # user -> (msg, count)
+    
+    for m in messages:
+        u = m.get('user', m.get('author', 'viewer'))
+        txt = m.get('message', '').strip().lower()
+        if not u or not txt: continue
+        
+        if u in last_msgs:
+            l_txt, l_count = last_msgs[u]
+            if txt == l_txt:
+                last_msgs[u] = (txt, l_count + 1)
+                # Penalize consecutive spam: after 3 repeats, stop giving points
+                if l_count < 3:
+                    user_scores[u] += 1
+            else:
+                last_msgs[u] = (txt, 1)
+                user_scores[u] += 1
+        else:
+            last_msgs[u] = (txt, 1)
+            user_scores[u] += 1
+            
+    most_active_user = max(user_scores.items(), key=lambda x: x[1])[0] if user_scores else "N/A"
+    
+    msg_counts = Counter([m['message'] for m in messages if len(m['message']) > 3])
+    top_message = msg_counts.most_common(1)[0][0] if msg_counts else "N/A"
+    
+    all_users = [m.get('user', m.get('author', 'viewer')) for m in messages]
+    unique_count = max(len(set(all_users)), 1)
+    pattern = "mixed"
+    if total / unique_count > 5: pattern = "dominated by few"
+    elif total / unique_count < 2: pattern = "broad participation"
+    else: pattern = "regular engagement"
+    
+    return {
+        "velocity": velocity,
+        "intensity": intensity,
+        "engagement_pattern": pattern,
+        "top_user": most_active_user,
+        "top_message": top_message,
+        "delta": round(delta * 100, 1)
     }
-    words = re.findall(r'\b[a-z]{3,}\b', all_text)
-    words = [w for w in words if w not in stop_words]
-    word_counts = Counter(words)
-    meaningful = [(w, c) for w, c in word_counts.most_common(50) if c >= 2]
-    return meaningful[:top_n]
 
 def generate_twitch_summary(messages):
     """Generate analytical summary for Twitch chat."""
@@ -541,7 +753,7 @@ def generate_twitch_summary(messages):
         summary_parts.append(f"Growing engagement with {total} messages so far.")
     return " ".join(summary_parts)
 
-def generate_twitch_suggestions(messages, counts):
+def generate_twitch_suggestions(messages, counts, channel=""):
     """Generate actionable streamer suggestions."""
     if len(messages) < 20:
         return {"suggestions": ["Need at least 20 messages to generate insights."], "note": "Keep the conversation going!"}
@@ -549,6 +761,14 @@ def generate_twitch_suggestions(messages, counts):
     total = sum(counts.values())
     if total == 0:
         return {"suggestions": ["No data available yet."], "note": "Waiting for chat activity..."}
+    
+    # Build exclude list from channel name
+    exclude = set()
+    if channel:
+        exclude.add(channel.lower())
+        for part in channel.lower().replace('_', ' ').replace('-', ' ').split():
+            if len(part) >= 3: exclude.add(part)
+    
     good_pct = (counts.get('good', 0) / total) * 100
     bad_pct = (counts.get('bad', 0) / total) * 100
     neutral_pct = (counts.get('neutral', 0) / total) * 100
@@ -562,18 +782,27 @@ def generate_twitch_suggestions(messages, counts):
         suggestions.append(f"Moderate Negativity: {round(bad_pct, 1)}% negative. Monitor chat for common complaints.")
     if neutral_pct > 70:
         suggestions.append(f"Low Engagement: {round(neutral_pct, 1)}% neutral. Try polls or Q&A to boost interaction.")
+    
+    # Improved complaints: only from bad messages, filter channel name + filler
     bad_messages = [m['message'].lower() for m in messages if m['sentiment'] == 'bad']
     if len(bad_messages) >= 5:
         complaint_keywords = Counter()
-        for msg in bad_messages[:30]:
-            words = re.findall(r'\b[a-z]{4,}\b', msg)
+        url_pat = r'https?://\S+|www\.\S+'
+        filler = {'this','that','what','when','where','why','how','they','there',
+                  'just','like','dont','even','still','think','really','know',
+                  'want','need','have','make','been','going','about','would',
+                  'could','should','every','much','thing','stuff','your','with'}
+        for msg in bad_messages:
+            cleaned = re.sub(url_pat, '', msg)
+            words = re.findall(r'\b[a-z]{4,}\b', cleaned)
+            words = [w for w in words if w not in filler and w not in exclude and w not in STOP_WORDS]
             complaint_keywords.update(words)
-        stop_words = {'this', 'that', 'what', 'when', 'where', 'why', 'how', 'they', 'there'}
-        common_complaints = [(w, c) for w, c in complaint_keywords.most_common(5) if w not in stop_words and c >= 2]
+        common_complaints = [(w, c) for w, c in complaint_keywords.most_common(8) if c >= 2]
         if common_complaints:
             complaint_terms = ", ".join([w for w, c in common_complaints[:3]])
             suggestions.append(f"Common Complaints: Viewers mention '{complaint_terms}'. Address these directly.")
-    keywords = extract_keywords(messages, top_n=10)
+    
+    keywords = extract_keywords(messages, top_n=10, exclude_words=exclude)
     if keywords:
         suggestions.append(f"Trending Topic: '{keywords[0][0]}' is being discussed heavily.")
     if not suggestions:
@@ -597,90 +826,102 @@ def calculate_stream_score(counts, messages):
         score -= 10
     return max(0, min(100, int(score)))
 
-class TwitchIRCClient:
-    """Connect to Twitch IRC as anonymous viewer and read live chat."""
-    def __init__(self, channel, oauth_token=None):
-        self.channel = channel.lower().replace('#', '').strip()
-        self.oauth_token = oauth_token or "justinfan12345"
-        self.irc_server = "irc.chat.twitch.tv"
-        self.irc_port = 6667
-        self.sock = None
-        self.running = False
+# ===== IRC & CHAT CLIENTS (from VMAX) =====
+
+class IRCChatClient:
+    platform_name = "unknown"
+
+    def __init__(self, channel: str, oauth_token: str = "", server: str = "irc.chat.twitch.tv", port: int = 6667):
+        self.channel    = channel.lower().replace('#', '').strip()
+        self.token      = oauth_token or "justinfan12345"
+        self.server     = server
+        self.port       = port
+        self._sock      = None
+        self.running    = False
 
     def connect(self):
-        try:
-            print(f"Connecting to Twitch #{self.channel}...")
-            self.sock = socket.socket()
-            self.sock.settimeout(30)
-            self.sock.connect((self.irc_server, self.irc_port))
-            username = f"justinfan{np.random.randint(10000, 99999)}"
-            self.sock.send(f"PASS oauth:{self.oauth_token}\n".encode('utf-8'))
-            self.sock.send(f"NICK {username}\n".encode('utf-8'))
-            self.sock.send(f"JOIN #{self.channel}\n".encode('utf-8'))
-            time.sleep(2)
-            self.running = True
-            print(f"Connected to Twitch #{self.channel} as {username}")
-        except Exception as e:
-            print(f"Twitch IRC connection failed: {e}")
-            raise
+        print(f"🔌 [{self.__class__.__name__}] Connecting #{self.channel}...")
+        self._sock = socket.socket()
+        self._sock.settimeout(30)
+        self._sock.connect((self.server, self.port))
+        username = f"justinfan{random.randint(10000, 99999)}"
+        for line in [f"PASS oauth:{self.token}\n", f"NICK {username}\n", f"JOIN #{self.channel}\n"]:
+            self._sock.send(line.encode('utf-8'))
+        time.sleep(2)
+        self.running = True
+        print(f"✅ Connected as {username} → #{self.channel}")
 
     def read_messages(self):
         buf = ""
         while self.running:
             try:
-                data = self.sock.recv(2048).decode('utf-8', errors='ignore')
+                data = self._sock.recv(2048).decode('utf-8', errors='ignore')
                 buf += data
                 lines = buf.split('\r\n')
                 buf = lines.pop()
                 for line in lines:
                     if line.startswith('PING'):
-                        self.sock.send(b"PONG :tmi.twitch.tv\n")
+                        self._sock.send(b"PONG :tmi.twitch.tv\n")
                         continue
                     if 'PRIVMSG' in line:
                         try:
-                            parts = line.split('PRIVMSG', 1)
-                            if len(parts) == 2:
+                            # Handle tags if present (lines starting with @)
+                            if line.startswith('@'):
+                                # Format: @tags :user!host PRIVMSG #channel :message
+                                parts = line.split(' ', 2)
+                                # username is between : and ! in the second part
+                                user = parts[1].split('!')[0].replace(':', '').strip()
+                                msg = line.split('PRIVMSG', 1)[1].split(':', 1)[-1].strip()
+                            else:
+                                # Standard Format: :user!host PRIVMSG #channel :message
+                                parts = line.split('PRIVMSG', 1)
                                 user = parts[0].split('!')[0].replace(':', '').strip()
                                 msg = parts[1].split(':', 1)[-1].strip()
-                                if user and msg and not detect_spam(msg):
-                                    self.process_message(user, msg)
+                                
+                            if user and msg and not detect_spam(msg):
+                                self._process(user, msg)
                         except Exception as e:
-                            print(f"Twitch parse error: {e}")
+                            print(f"⚠️ Parse error: {e}")
             except socket.timeout:
                 continue
             except Exception as e:
-                if self.running:
-                    print(f"Twitch IRC error: {e}")
-                time.sleep(1)
+                if self.running: print(f"❌ Read error: {e}")
+                break
 
-    def process_message(self, username, message):
+    def _process(self, username: str, message: str):
+        if self.channel not in twitch_chat_buffers:
+            twitch_chat_buffers[self.channel] = deque(maxlen=MAX_BUFFER_SIZE)
+        buf = twitch_chat_buffers[self.channel]
+        
         sentiment = classify_simple(message)
+        message = transform_emotes(message)
+        
         msg_obj = {
             "user": username,
             "time": datetime.now().strftime("%H:%M:%S"),
-            "timestamp": datetime.now().isoformat(),
             "message": message,
             "sentiment": sentiment,
-            "author": username
+            "platform": self.platform_name,
         }
-        if self.channel not in twitch_chat_buffers:
-            twitch_chat_buffers[self.channel] = deque(maxlen=MAX_BUFFER_SIZE)
-        twitch_chat_buffers[self.channel].append(msg_obj)
-        socketio.emit('twitch_message', msg_obj)
+        buf.append(msg_obj)
+        socketio.emit('new_message', msg_obj)
 
     def disconnect(self):
         self.running = False
-        if self.sock:
-            try:
-                self.sock.close()
-            except:
-                pass
+        if self._sock:
+            try: self._sock.close()
+            except: pass
+        self._sock = None
 
+class TwitchIRCClient(IRCChatClient):
+    platform_name = "twitch"
+    def __init__(self, channel, oauth_token=""):
+        super().__init__(channel, oauth_token, "irc.chat.twitch.tv", 6667)
 
 class KickChatClient:
     """
-    Kick chat via Pusher WebSocket — no auth needed for public channels.
-    Resolves chatroom_id through multiple strategies in order of reliability.
+    Kick chat via Pusher WebSocket.
+    Resolves chatroom_id through 5 strategies for maximum reliability.
     """
     platform_name = "kick"
     PUSHER_URL = (
@@ -693,7 +934,7 @@ class KickChatClient:
         "https://api.codetabs.com/v1/proxy?quest=",
     ]
 
-    def __init__(self, channel: str, oauth_token: str = ""):
+    def __init__(self, channel: str):
         self.channel = channel.lower().strip()
         self.running = False
         self._ws = None
@@ -703,131 +944,142 @@ class KickChatClient:
     def connect(self):
         print(f"🔌 [KickChatClient] Resolving #{self.channel}...")
         strategies = [
-            ("tls-client (Chrome TLS fingerprint)", self._try_tls_client),
+            ("tls-client", self._try_tls_client),
             ("httpx HTTP/2", self._try_httpx),
-            ("cloudscraper CF bypass", self._try_cloudscraper),
-            ("CORS proxy external relay", self._try_cors_proxy),
-            ("manual chatroom_id", self._try_manual_fallback),
+            ("cloudscraper", self._try_cloudscraper),
+            ("CORS proxy", self._try_cors_proxy),
+            ("Selenium", self._try_selenium),
+            ("manual fallback", self._try_manual_fallback),
         ]
-        chatroom_id = None
+        
         for name, fn in strategies:
-            print(f"  → Trying: {name}")
             try:
-                chatroom_id = fn()
+                self._chatroom_id = fn()
+                if self._chatroom_id:
+                    print(f"  ✅ chatroom_id={self._chatroom_id} via {name}")
+                    break
             except Exception as e:
-                print(f"    ✗ {name}: {e}")
-            if chatroom_id:
-                print(f"  ✅ chatroom_id={chatroom_id} via [{name}]")
-                break
-        if not chatroom_id:
-            raise ConnectionError(
-                f"Cannot connect to Kick #{self.channel} — all strategies failed.\n"
-                "Try: pip install httpx[http2]  OR  use a VPN  OR  pass chatroom_id manually."
-            )
-        self._chatroom_id = chatroom_id
+                print(f"  ✗ {name}: {e}")
+                
+        if not self._chatroom_id:
+            raise ConnectionError(f"Could not resolve Kick chat ID for {self.channel}")
         self.running = True
-        print(f"✅ Kick #{self.channel} → chatroom_id={chatroom_id}")
 
     def _kick_json(self, url, session=None):
-        """Shared helper: fetch a Kick JSON endpoint, return parsed dict or None."""
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "en-US,en;q=0.9",
+            "Accept": "application/json",
             "Referer": "https://kick.com/",
         }
-        r = (session or requests).get(url, headers=headers, timeout=12)
-        if r.status_code == 404:
-            print(f"    ✗ 404 — channel not found")
-            return None
-        if r.status_code == 200:
-            return r.json()
-        print(f"    ✗ HTTP {r.status_code}")
-        return None
+        r = (session or requests).get(url, headers=headers, timeout=10)
+        return r.json() if r.status_code == 200 else None
 
     def _extract_cid(self, data):
-        """Pull chatroom id from v2 or internal API response."""
-        if not data:
-            return None
-        return (
-            (data.get("chatroom") or {}).get("id")
-            or ((data.get("data") or {}).get("chatroom") or {}).get("id")
-        )
+        if not data: return None
+        return (data.get("chatroom") or {}).get("id") or ((data.get("data") or {}).get("chatroom") or {}).get("id")
+
+    def _try_tls_client(self):
+        try:
+            import tls_client
+            session = tls_client.Session(client_identifier="chrome_120")
+            url = f"https://kick.com/api/v2/channels/{self.channel}"
+            return self._extract_cid(self._kick_json(url, session))
+        except: return None
 
     def _try_httpx(self):
         try:
             import httpx
-        except ImportError:
-            print("    ✗ not installed: pip install httpx[http2]")
-            return None
-        try:
-            with httpx.Client(http2=True, timeout=12, follow_redirects=True) as client:
-                for url in [
-                    f"https://kick.com/api/v2/channels/{self.channel}",
-                    f"https://kick.com/api/internal/v1/channels/{self.channel}",
-                ]:
-                    try:
-                        cid = self._extract_cid(self._kick_json(url, client))
-                        if cid:
-                            return cid
-                    except Exception as e:
-                        print(f"    ✗ httpx {url[-30:]}: {e}")
-        except Exception as e:
-            print(f"    ✗ httpx init: {e}")
-        return None
+            with httpx.Client(http2=True, timeout=10) as client:
+                url = f"https://kick.com/api/v2/channels/{self.channel}"
+                return self._extract_cid(self._kick_json(url, client))
+        except: return None
 
     def _try_cloudscraper(self):
         try:
             import cloudscraper
-        except ImportError:
-            print("    ✗ not installed: pip install cloudscraper")
-            return None
-        try:
-            session = cloudscraper.create_scraper(
-                browser={"browser": "chrome", "platform": "windows", "mobile": False}, delay=5)
-            for url in [
-                f"https://kick.com/api/v2/channels/{self.channel}",
-                f"https://kick.com/api/internal/v1/channels/{self.channel}",
-            ]:
-                try:
-                    cid = self._extract_cid(self._kick_json(url, session))
-                    if cid:
-                        return cid
-                except Exception as e:
-                    print(f"    ✗ cloudscraper {url[-30:]}: {e}")
-        except Exception as e:
-            print(f"    ✗ cloudscraper init: {e}")
+            session = cloudscraper.create_scraper()
+            url = f"https://kick.com/api/v2/channels/{self.channel}"
+            return self._extract_cid(self._kick_json(url, session))
+        except: return None
+
+    def _try_cors_proxy(self):
+        import urllib.parse
+        target = f"https://kick.com/api/v2/channels/{self.channel}"
+        encoded = urllib.parse.quote(target)
+        for proxy in self.CORS_PROXIES:
+            try:
+                r = requests.get(f"{proxy}{encoded}", timeout=10)
+                if r.status_code == 200:
+                    return self._extract_cid(r.json())
+            except: pass
         return None
 
-    def _try_tls_client(self):
+    def _try_selenium(self):
         try:
-            import tls_client as _tls
-        except ImportError:
-            print("    ✗ not installed: pip install tls-client")
-            return None
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Referer": "https://kick.com/",
-        }
-        session = _tls.Session(client_identifier="chrome_120", random_tls_extension_order=True)
-        for url in [
-            f"https://kick.com/api/v2/channels/{self.channel}",
-            f"https://kick.com/api/internal/v1/channels/{self.channel}",
-        ]:
+            from selenium import webdriver
+            from selenium.webdriver.chrome.options import Options
+            opts = Options()
+            opts.add_argument("--headless")
+            driver = webdriver.Chrome(options=opts)
+            driver.get(f"https://kick.com/api/v2/channels/{self.channel}")
+            time.sleep(3)
+            import json
+            data = json.loads(driver.find_element("tag name", "body").text)
+            driver.quit()
+            return self._extract_cid(data)
+        except: return None
+
+    def _try_manual_fallback(self):
+        return self._manual_chatroom_id
+
+    def read_messages(self):
+        import websocket as ws_lib
+        import json as _json
+
+        def on_open(ws):
+            sub = _json.dumps({
+                "event": "pusher:subscribe",
+                "data": {"auth": "", "channel": f"chatrooms.{self._chatroom_id}.v2"}
+            })
+            ws.send(sub)
+
+        def on_message(ws, raw):
+            if not self.running: ws.close(); return
             try:
-                r = session.get(url, headers=headers)
-                if r.status_code == 200:
-                    data = r.json()
-                    cid = self._extract_cid(data)
-                    if cid:
-                        return cid
-                else:
-                    print(f"    ✗ tls HTTP {r.status_code} for {url[-30:]}")
-            except Exception as e:
-                print(f"    ✗ tls {url[-30:]}: {e}")
-        return None
+                frame = _json.loads(raw)
+                if frame.get("event") == "App\\Events\\ChatMessageEvent":
+                    data = frame.get("data")
+                    if isinstance(data, str): data = _json.loads(data)
+                    user = data.get("sender", {}).get("username", "unknown")
+                    msg = data.get("content", "")
+                    msg = re.sub(r'\[emote:\d+:[^\]]+\]', '', msg).strip()
+                    if msg and not detect_spam(msg):
+                        self._process(user, msg)
+            except: pass
+
+        self._ws = ws_lib.WebSocketApp(self.PUSHER_URL, on_open=on_open, on_message=on_message)
+        self._ws.run_forever(ping_interval=30)
+
+    def _process(self, username, message):
+        if self.channel not in kick_chat_buffers:
+            kick_chat_buffers[self.channel] = deque(maxlen=MAX_BUFFER_SIZE)
+        buf = kick_chat_buffers[self.channel]
+        sentiment = classify_simple(message)
+        message = transform_emotes(message)
+        
+        msg_obj = {
+            "user": username,
+            "time": datetime.now().strftime("%H:%M:%S"),
+            "message": message,
+            "sentiment": sentiment,
+            "platform": self.platform_name,
+        }
+        buf.append(msg_obj)
+        socketio.emit('new_message', msg_obj)
+
+    def disconnect(self):
+        self.running = False
+        if self._ws: self._ws.close()
 
     def _try_cors_proxy(self):
         import urllib.parse
@@ -958,41 +1210,48 @@ def twitch_connect():
         client = TwitchIRCClient(channel)
         client.connect()
         
-        # Pre-load 50 recent messages for Twitch
+        # Pre-load recent messages for Twitch
         try:
             print(f"Pre-loading recent messages for Twitch #{channel}...")
-            history_url = f"https://recent-messages.robotty.de/api/v2/recent-messages/{channel}?limit=50"
-            h_res = requests.get(history_url, timeout=5)
+            history_url = f"https://recent-messages.robotty.de/api/v2/recent-messages/{channel}?limit=100"
+            h_res = requests.get(history_url, timeout=8)
             if h_res.status_code == 200:
                 h_data = h_res.json()
                 recent_msgs = h_data.get("messages", [])
                 if channel not in twitch_chat_buffers:
                     twitch_chat_buffers[channel] = deque(maxlen=MAX_BUFFER_SIZE)
                 
+                loaded = 0
                 for rm in recent_msgs:
-                    # Parse robotty format: "2024-03-24 13:00:00 user: message" or similar
-                    # Actually robotty returns raw IRC lines or structured data depending on version.
-                    # v2 structured: {"messages": ["line1", "line2", ...]}
-                    # Let's assume raw IRC lines for now or try to parse them simply.
-                    # Looking at typical robotty response: 
-                    # ":user!user@user.tmi.twitch.tv PRIVMSG #channel :message"
                     line = rm
                     if 'PRIVMSG' in line:
-                        parts = line.split('PRIVMSG', 1)
-                        user = parts[0].split('!')[0].replace(':', '').strip()
-                        msg = parts[1].split(':', 1)[-1].strip()
-                        if user and msg and not detect_spam(msg):
-                            sentiment = classify_simple(msg)
-                            msg_obj = {
-                                "user": user,
-                                "time": datetime.now().strftime("%H:%M:%S"),
-                                "timestamp": datetime.now().isoformat(),
-                                "message": msg,
-                                "sentiment": sentiment,
-                                "author": user
-                            }
-                            twitch_chat_buffers[channel].append(msg_obj)
-                print(f"Pre-loaded {len(recent_msgs)} messages for Twitch #{channel}")
+                        try:
+                            if line.startswith('@'):
+                                parts = line.split(' ', 2)
+                                user = parts[1].split('!')[0].replace(':', '').strip()
+                                msg = line.split('PRIVMSG', 1)[1].split(':', 1)[-1].strip()
+                            else:
+                                parts = line.split('PRIVMSG', 1)
+                                user = parts[0].split('!')[0].replace(':', '').strip()
+                                msg = parts[1].split(':', 1)[-1].strip()
+                                
+                            if user and msg and not detect_spam(msg):
+                                msg = transform_emotes(msg)
+                                sentiment = classify_simple(msg)
+                                msg_obj = {
+                                    "user": user,
+                                    "time": datetime.now().strftime("%H:%M:%S"),
+                                    "timestamp": datetime.now().isoformat(),
+                                    "message": msg,
+                                    "sentiment": sentiment,
+                                    "author": user,
+                                    "platform": "twitch"
+                                }
+                                twitch_chat_buffers[channel].append(msg_obj)
+                                loaded += 1
+                        except Exception as e:
+                            pass
+                print(f"✅ Pre-loaded {loaded}/{len(recent_msgs)} messages for Twitch #{channel}")
         except Exception as e:
             print(f"Twitch pre-loading failed: {e}")
 
@@ -1029,10 +1288,10 @@ def twitch_messages(channel):
 def twitch_analytics(channel):
     channel = channel.lower()
     if channel not in twitch_chat_buffers:
-        return jsonify({"error": "No data available"}), 404
+        return jsonify({"total_messages": 0, "counts": {"good": 0, "bad": 0, "neutral": 0}, "mood": "Waiting for chat...", "keywords": [], "stream_score": 50, "top_user": "N/A", "top_chat": "N/A", "summary": "Waiting for messages...", "patterns": {}, "percentages": {"good": 0, "bad": 0, "neutral": 0}})
     messages = list(twitch_chat_buffers[channel])
     if not messages:
-        return jsonify({"error": "No messages to analyze"}), 404
+        return jsonify({"total_messages": 0, "counts": {"good": 0, "bad": 0, "neutral": 0}, "mood": "Waiting for chat...", "keywords": [], "stream_score": 50, "top_user": "N/A", "top_chat": "N/A", "summary": "Waiting for messages...", "patterns": {}, "percentages": {"good": 0, "bad": 0, "neutral": 0}})
     counts = {
         "good": sum(1 for m in messages if m['sentiment'] == 'good'),
         "bad": sum(1 for m in messages if m['sentiment'] == 'bad'),
@@ -1044,16 +1303,15 @@ def twitch_analytics(channel):
         "bad": round((counts['bad'] / total) * 100, 1) if total > 0 else 0,
         "neutral": round((counts['neutral'] / total) * 100, 1) if total > 0 else 0
     }
-    if percentages['good'] > 60:
-        mood = "Happy"
-    elif percentages['bad'] > 40:
-        mood = "Toxic"
-    elif percentages['neutral'] > 50:
-        mood = "Chill"
-    else:
-        mood = "Mixed"
-    keywords = extract_keywords(messages, top_n=10)
+    g, b, n = percentages.get('good', 0), percentages.get('bad', 0), percentages.get('neutral', 0)
+    mood = calculate_stream_mood(messages)
+    exclude = {channel}
+    for part in channel.replace('_', ' ').replace('-', ' ').split():
+        if len(part) >= 3: exclude.add(part)
+    keywords = extract_keywords(messages, top_n=10, exclude_words=exclude)
     score = calculate_stream_score(counts, messages)
+    patterns = analyse_sentiment_patterns(messages)
+    
     return jsonify({
         "counts": counts,
         "percentages": percentages,
@@ -1062,6 +1320,12 @@ def twitch_analytics(channel):
         "stream_score": score,
         "total_messages": total,
         "summary": summarize(counts),
+        "patterns": patterns,
+        "velocity": patterns.get("velocity", "stable"),
+        "intensity": patterns.get("intensity", "moderate"),
+        "engagement_pattern": patterns.get("engagement_pattern", "regular"),
+        "top_user": patterns.get("top_user", "N/A"),
+        "top_chat": patterns.get("top_message", "N/A"),
         "timestamp": datetime.now().isoformat()
     })
 
@@ -1078,14 +1342,14 @@ def twitch_summary(channel):
 def twitch_suggestions(channel):
     channel = channel.lower()
     if channel not in twitch_chat_buffers:
-        return jsonify({"error": "No data available"}), 404
+        return jsonify({"suggestions": ["Waiting for chat messages..."], "note": "Connect to a stream to start analysis"})
     messages = list(twitch_chat_buffers[channel])
     counts = {
         "good": sum(1 for m in messages if m['sentiment'] == 'good'),
         "bad": sum(1 for m in messages if m['sentiment'] == 'bad'),
         "neutral": sum(1 for m in messages if m['sentiment'] == 'neutral')
     }
-    suggestions = generate_twitch_suggestions(messages, counts)
+    suggestions = generate_twitch_suggestions(messages, counts, channel)
     return jsonify(suggestions)
 
 # ===== KICK ROUTES =====
@@ -1125,13 +1389,16 @@ def kick_connect():
                     content = km.get("content", "")
                     content = re.sub(r'\[emote:\d+:[^\]]+\]', '', content).strip()
                     if content and not detect_spam(content):
+                        content = transform_emotes(content)
                         sentiment = classify_simple(content)
+                        intent = get_msg_intent(content)
                         msg_obj = {
                             "user": user,
                             "time": datetime.now().strftime("%H:%M:%S"),
                             "timestamp": datetime.now().isoformat(),
                             "message": content,
                             "sentiment": sentiment,
+                            "intent": intent,
                             "author": user,
                             "platform": "kick"
                         }
@@ -1175,10 +1442,10 @@ def kick_messages(channel):
 def kick_analytics(channel):
     channel = channel.lower()
     if channel not in kick_chat_buffers:
-        return jsonify({"error": "No data available"}), 404
+        return jsonify({"total_messages": 0, "counts": {"good": 0, "bad": 0, "neutral": 0}, "mood": "Waiting for chat...", "keywords": [], "stream_score": 50, "top_user": "N/A", "top_chat": "N/A", "summary": "Waiting for messages...", "patterns": {}, "percentages": {"good": 0, "bad": 0, "neutral": 0}})
     messages = list(kick_chat_buffers[channel])
     if not messages:
-        return jsonify({"error": "No messages to analyze"}), 404
+        return jsonify({"total_messages": 0, "counts": {"good": 0, "bad": 0, "neutral": 0}, "mood": "Waiting for chat...", "keywords": [], "stream_score": 50, "top_user": "N/A", "top_chat": "N/A", "summary": "Waiting for messages...", "patterns": {}, "percentages": {"good": 0, "bad": 0, "neutral": 0}})
     counts = {
         "good": sum(1 for m in messages if m['sentiment'] == 'good'),
         "bad": sum(1 for m in messages if m['sentiment'] == 'bad'),
@@ -1190,16 +1457,14 @@ def kick_analytics(channel):
         "bad": round((counts['bad'] / total) * 100, 1) if total > 0 else 0,
         "neutral": round((counts['neutral'] / total) * 100, 1) if total > 0 else 0
     }
-    if percentages['good'] > 60:
-        mood = "Happy 😊"
-    elif percentages['bad'] > 40:
-        mood = "Toxic 😠"
-    elif percentages['neutral'] > 50:
-        mood = "Chill 😌"
-    else:
-        mood = "Mixed 🤔"
-    keywords = extract_keywords(messages, top_n=10)
+    mood = calculate_stream_mood(messages)
+    exclude = {channel}
+    for part in channel.replace('_', ' ').replace('-', ' ').split():
+        if len(part) >= 3: exclude.add(part)
+    keywords = extract_keywords(messages, top_n=10, exclude_words=exclude)
     score = calculate_stream_score(counts, messages)
+    patterns = analyse_sentiment_patterns(messages)
+    
     return jsonify({
         "counts": counts,
         "percentages": percentages,
@@ -1208,6 +1473,12 @@ def kick_analytics(channel):
         "stream_score": score,
         "total_messages": total,
         "summary": summarize(counts),
+        "patterns": patterns,
+        "velocity": patterns.get("velocity", "stable"),
+        "intensity": patterns.get("intensity", "moderate"),
+        "engagement_pattern": patterns.get("engagement_pattern", "regular"),
+        "top_user": patterns.get("top_user", "N/A"),
+        "top_chat": patterns.get("top_message", "N/A"),
         "timestamp": datetime.now().isoformat()
     })
 
@@ -1231,7 +1502,7 @@ def kick_suggestions(channel):
         "bad": sum(1 for m in messages if m['sentiment'] == 'bad'),
         "neutral": sum(1 for m in messages if m['sentiment'] == 'neutral')
     }
-    suggestions = generate_twitch_suggestions(messages, counts)
+    suggestions = generate_twitch_suggestions(messages, counts, channel)
     return jsonify(suggestions)
 
 # ===== WEBSOCKET HANDLERS =====

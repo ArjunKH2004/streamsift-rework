@@ -16,3 +16,7 @@ gunicorn
 python-dotenv
 requests
 pusher
+tls-client
+httpx[http2]
+cloudscraper
+websocket-client
