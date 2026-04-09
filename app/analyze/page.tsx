@@ -349,7 +349,14 @@ function AnalyzeContent() {
 
                     // Fetch suggestions for YouTube every few batch updates
                     if (Math.random() > 0.7) {
-                        getYouTubeSuggestions(analysis?.counts || liveData.counts, liveData.messages).then(setYtSuggestions).catch(() => {});
+                        // Use the full accumulated comments array, not just the latest batch
+                        const allMessages = [...(comments || []), ...newComments];
+                        const currentCounts = {
+                            good: (analysis?.counts?.good || 0) + (liveData.counts.good || 0),
+                            bad: (analysis?.counts?.bad || 0) + (liveData.counts.bad || 0),
+                            neutral: (analysis?.counts?.neutral || 0) + (liveData.counts.neutral || 0)
+                        };
+                        getYouTubeSuggestions(currentCounts, allMessages).then(setYtSuggestions).catch(() => {});
                     }
                 }
                 if (liveData.nextPageToken) {
@@ -471,14 +478,57 @@ function AnalyzeContent() {
     const isKickMode = selectedPlatform === "kick" && kickConnected;
     const isLiveMode = isTwitchMode || isKickMode || !!activeLiveChatId;
     
-    const liveAnalytics = isTwitchMode ? twitchAnalytics : isKickMode ? kickAnalytics : activeLiveChatId ? {
-        total_messages: (analysis?.counts?.good || 0) + (analysis?.counts?.bad || 0) + (analysis?.counts?.neutral || 0),
-        stream_score: analysis?.stream_score || 50,
-        mood: analysis?.summary ? "Analyzing..." : "Waiting...",
-        top_user: analysis?.top_user || "—",
-        top_chat: analysis?.top_message || "—",
-        keywords: analysis?.keywords || []
-    } : null;
+    const liveAnalytics = isTwitchMode ? twitchAnalytics : isKickMode ? kickAnalytics : activeLiveChatId ? (() => {
+        const totalMsgs = (analysis?.counts?.good || 0) + (analysis?.counts?.bad || 0) + (analysis?.counts?.neutral || 0);
+        const counts = analysis?.counts || { good: 0, bad: 0, neutral: 0 };
+        const total = counts.good + counts.bad + counts.neutral;
+        
+        // Compute mood from sentiment
+        let mood = "Waiting...";
+        if (total >= 10) {
+            const pg = (counts.good / total) * 100;
+            const pb = (counts.bad / total) * 100;
+            if (pg > 60) mood = "Hyped 🔥";
+            else if (pg > 40 && pb < 20) mood = "Positive 😊";
+            else if (pb > 40) mood = "Frustrated 😤";
+            else if (pb > 25) mood = "Tense 😬";
+            else mood = "Chill 😌";
+        }
+        
+        // Compute top user from comments
+        const userCounts: Record<string, number> = {};
+        comments.forEach((c: any) => { if (c.user) userCounts[c.user] = (userCounts[c.user] || 0) + 1; });
+        const topUser = Object.entries(userCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+        const topChat = comments.length > 0 ? comments[comments.length - 1]?.text || "—" : "—";
+        
+        // Build AI insight from sentiment data
+        let aiInsight = "";
+        if (total >= 20) {
+            const pg = (counts.good / total) * 100;
+            const pb = (counts.bad / total) * 100;
+            if (pg > 60) aiInsight = `The YouTube chat is energized with ${pg.toFixed(0)}% positive messages across ${total} analyzed. The community is actively enjoying and reacting to the content.`;
+            else if (pb > 35) aiInsight = `Caution: ${pb.toFixed(0)}% negative sentiment detected in ${total} messages. The audience may have specific complaints worth addressing on stream.`;
+            else aiInsight = `The community is showing balanced engagement with ${total} messages analyzed. Sentiment is mixed, indicating diverse viewer opinions and active participation.`;
+        }
+        
+        return {
+            total_messages: totalMsgs,
+            stream_score: analysis?.stream_score || 50,
+            mood,
+            top_user: topUser,
+            top_chat: topChat,
+            keywords: analysis?.keywords || [],
+            ai_insight: aiInsight || null,
+            archetype: total >= 20 ? (() => {
+                const pg = (counts.good / total) * 100;
+                const pb = (counts.bad / total) * 100;
+                if (pg > 65) return { name: "The Hype Squad", icon: "🎉", desc: "An overwhelmingly positive community cheering the streamer on.", class: "text-green-400" };
+                if (pb > 40) return { name: "The Pitchforks", icon: "🔥", desc: "A vocal crowd with strong negative reactions dominating chat.", class: "text-red-400" };
+                if (pb > 25) return { name: "Opinionated Critics", icon: "🧐", desc: "Viewers sharing strong opinions with notable pushback.", class: "text-yellow-400" };
+                return { name: "The Silent Majority", icon: "🤫", desc: "A calm, observant audience engaging at a relaxed pace.", class: "text-blue-400" };
+            })() : null
+        };
+    })() : null;
     
     const liveSuggestions = isTwitchMode ? twitchSuggestions : isKickMode ? kickSuggestions : activeLiveChatId ? ytSuggestions : null;
     const liveChannel = isTwitchMode ? twitchChannel : isKickMode ? kickChannel : activeVideoId || "";
