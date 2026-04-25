@@ -1,12 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const [activeTab, setActiveTab] = useState("home");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (window.location.hash === "#about") {
+        setActiveTab("about");
+      } else if (pathname === "/compare") {
+        setActiveTab("compare");
+      } else if (pathname === "/") {
+        setActiveTab("home");
+      }
+    }
+  }, [pathname]);
 
   return (
     <header className="flex justify-center py-4 sm:py-6 sticky top-0 z-50 px-4 bg-black/50 backdrop-blur-md w-full border-b border-gray-800/50">
@@ -27,19 +42,22 @@ export default function Navigation() {
           <div className="flex items-center bg-gray-900/80 rounded-full px-6 py-3 gap-8">
             <Link
               href="/"
-              className="text-purple-400 font-semibold text-base hover:text-white transition-colors"
+              onClick={() => setActiveTab("home")}
+              className={`${activeTab === "home" ? "text-purple-400" : "text-gray-300"} font-semibold text-base hover:text-white transition-colors`}
             >
               Home
             </Link>
             <a
               href="/#about"
-              className="text-gray-300 font-semibold text-base hover:text-white transition-colors"
+              onClick={() => setActiveTab("about")}
+              className={`${activeTab === "about" ? "text-purple-400" : "text-gray-300"} font-semibold text-base hover:text-white transition-colors`}
             >
               About
             </a>
             <Link
               href="/compare"
-              className="text-gray-300 font-semibold text-base hover:text-white transition-colors"
+              onClick={() => setActiveTab("compare")}
+              className={`${activeTab === "compare" ? "text-purple-400" : "text-gray-300"} font-semibold text-base hover:text-white transition-colors`}
             >
               Compare
             </Link>
@@ -72,19 +90,22 @@ export default function Navigation() {
           <div className="px-4 sm:px-6 py-6 space-y-4">
             <Link
               href="/"
-              className="block text-purple-400 px-4 py-3 rounded-full font-semibold text-center text-sm sm:text-base"
+              onClick={() => { setActiveTab("home"); setIsMenuOpen(false); }}
+              className={`block ${activeTab === "home" ? "text-purple-400" : "text-gray-300"} px-4 py-3 rounded-full font-semibold text-center hover:text-white transition-colors text-sm sm:text-base`}
             >
               Home
             </Link>
             <a
               href="/#about"
-              className="block text-gray-300 px-4 py-3 rounded-full font-semibold text-center hover:text-white transition-colors text-sm sm:text-base"
+              onClick={() => { setActiveTab("about"); setIsMenuOpen(false); }}
+              className={`block ${activeTab === "about" ? "text-purple-400" : "text-gray-300"} px-4 py-3 rounded-full font-semibold text-center hover:text-white transition-colors text-sm sm:text-base`}
             >
               About
             </a>
             <Link
               href="/compare"
-              className="block text-gray-300 px-4 py-3 rounded-full font-semibold text-center hover:text-white transition-colors text-sm sm:text-base"
+              onClick={() => { setActiveTab("compare"); setIsMenuOpen(false); }}
+              className={`block ${activeTab === "compare" ? "text-purple-400" : "text-gray-300"} px-4 py-3 rounded-full font-semibold text-center hover:text-white transition-colors text-sm sm:text-base`}
             >
               Compare
             </Link>
