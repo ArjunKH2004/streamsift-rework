@@ -8,13 +8,13 @@ export default function Hero() {
   return (
     <section className="relative min-h-screen flex items-center justify-center px-6 py-20 overflow-hidden bg-black">
       {/* Earth at the bottom - positioned to show curved edge */}
-      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/3 z-0">
+      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-[40%] sm:translate-y-[50%] w-[180vw] sm:w-[150vw] lg:w-[110vw] max-w-[2500px] z-0 pointer-events-none">
         <Image
           src="/images/hero/Earth.png"
           alt="Earth"
-          width={1400}
-          height={700}
-          className="object-contain"
+          width={2500}
+          height={1250}
+          className="w-full h-auto object-contain"
           priority
         />
       </div>
@@ -22,10 +22,11 @@ export default function Hero() {
       {/* Floating Platform Icons - positioned to match the image exactly */}
       {/* Kick icon - top left */}
       <motion.div
-        className="absolute top-32 left-32 z-20"
+        className="absolute top-40 left-[10%] lg:left-[20%] z-20"
+        initial={{ rotate: 12.49 }}
         animate={{
-          y: [-10, 10, -10],
-          rotate: [-3, 3, -3],
+          y: [-15, 15, -15],
+          rotate: [12.49, 15.49, 12.49],
         }}
         transition={{
           duration: 6,
@@ -33,23 +34,22 @@ export default function Hero() {
           ease: "easeInOut",
         }}
       >
-        <div className="bg-gray-800/90 backdrop-blur-lg rounded-2xl p-3 border border-gray-600/30 shadow-2xl">
-          <Image
-            src="/images/hero/kick.png"
-            alt="Kick"
-            width={40}
-            height={40}
-            className="object-contain"
-          />
-        </div>
+        <Image
+          src="/images/hero/kick.png"
+          alt="Kick"
+          width={140}
+          height={140}
+          className="w-24 sm:w-32 lg:w-40 object-contain drop-shadow-2xl"
+        />
       </motion.div>
 
       {/* YouTube icon - top right */}
       <motion.div
-        className="absolute top-20 right-32 z-20"
+        className="absolute top-32 right-[10%] lg:right-[20%] z-20"
+        initial={{ rotate: -12.49 }}
         animate={{
-          y: [10, -10, 10],
-          rotate: [3, -3, 3],
+          y: [15, -15, 15],
+          rotate: [-12.49, -9.49, -12.49],
         }}
         transition={{
           duration: 5,
@@ -58,25 +58,24 @@ export default function Hero() {
           delay: 1,
         }}
       >
-        <div className="bg-gray-800/90 backdrop-blur-lg rounded-2xl p-3 border border-gray-600/30 shadow-2xl">
-          <Image
-            src="/images/hero/youtube.png"
-            alt="YouTube"
-            width={40}
-            height={40}
-            className="object-contain"
-          />
-        </div>
+        <Image
+          src="/images/hero/youtube.png"
+          alt="YouTube"
+          width={140}
+          height={140}
+          className="w-24 sm:w-32 lg:w-40 object-contain drop-shadow-2xl"
+        />
       </motion.div>
 
 
 
       {/* Twitch icon - middle right */}
       <motion.div
-        className="absolute top-1/2 right-20 transform -translate-y-1/2 translate-y-8 z-20"
+        className="absolute top-[60%] right-[15%] lg:right-[15%] z-20"
+        initial={{ rotate: -23 }}
         animate={{
-          y: [8, -8, 8],
-          rotate: [-5, 5, -5],
+          y: [12, -12, 12],
+          rotate: [-23, -20, -23],
         }}
         transition={{
           duration: 8,
@@ -85,15 +84,13 @@ export default function Hero() {
           delay: 3,
         }}
       >
-        <div className="bg-gray-800/90 backdrop-blur-lg rounded-2xl p-3 border border-gray-600/30 shadow-2xl">
-          <Image
-            src="/images/hero/twitch.png"
-            alt="Twitch"
-            width={40}
-            height={40}
-            className="object-contain"
-          />
-        </div>
+        <Image
+          src="/images/hero/twitch.png"
+          alt="Twitch"
+          width={150}
+          height={150}
+          className="w-28 sm:w-36 lg:w-44 object-contain drop-shadow-2xl"
+        />
       </motion.div>
 
       {/* Main Content */}
