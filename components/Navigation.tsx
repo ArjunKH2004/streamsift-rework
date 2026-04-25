@@ -9,7 +9,7 @@ export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="flex justify-center pt-4 sm:pt-6 pb-0 sticky top-0 z-50 px-4">
+    <header className="flex justify-center py-4 sm:py-6 sticky top-0 z-50 px-4 bg-black/50 backdrop-blur-md w-full border-b border-gray-800/50">
       <div className="flex items-center w-full max-w-7xl justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center">
