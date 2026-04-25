@@ -8,7 +8,7 @@ export default function Hero() {
   return (
     <section className="relative min-h-screen flex items-center justify-center px-6 py-20 overflow-hidden bg-black">
       {/* Earth at the bottom - positioned to show curved edge */}
-      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-[40%] sm:translate-y-[50%] w-[180vw] sm:w-[150vw] lg:w-[110vw] max-w-[2500px] z-0 pointer-events-none">
+      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-[20%] lg:translate-y-[30%] w-[200vw] sm:w-[150vw] lg:w-[110vw] max-w-[2500px] z-0 pointer-events-none">
         <Image
           src="/images/hero/Earth.png"
           alt="Earth"
@@ -22,7 +22,7 @@ export default function Hero() {
       {/* Floating Platform Icons - positioned to match the image exactly */}
       {/* Kick icon - top left */}
       <motion.div
-        className="absolute top-40 left-[10%] lg:left-[20%] z-20"
+        className="absolute top-40 left-[5%] md:left-[15%] lg:left-[22%] z-20"
         initial={{ rotate: 12.49 }}
         animate={{
           y: [-15, 15, -15],
@@ -45,7 +45,7 @@ export default function Hero() {
 
       {/* YouTube icon - top right */}
       <motion.div
-        className="absolute top-32 right-[10%] lg:right-[20%] z-20"
+        className="absolute top-32 right-[5%] md:right-[15%] lg:right-[22%] z-20"
         initial={{ rotate: -12.49 }}
         animate={{
           y: [15, -15, 15],
@@ -71,7 +71,7 @@ export default function Hero() {
 
       {/* Twitch icon - middle right */}
       <motion.div
-        className="absolute top-[60%] right-[15%] lg:right-[15%] z-20"
+        className="absolute top-[65%] right-[10%] lg:right-[20%] z-20"
         initial={{ rotate: -23 }}
         animate={{
           y: [12, -12, 12],
@@ -100,9 +100,9 @@ export default function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <h1 className="font-gilroy text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-6 leading-tight">
-            <span className="text-white block mb-2">Understand Your Audience.</span>
-            <span className="bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-400 bg-clip-text text-transparent block">
+          <h1 className="font-gilroy font-bold mb-6 leading-tight">
+            <span className="text-white block mb-2 text-4xl sm:text-5xl md:text-6xl lg:text-[76px] whitespace-nowrap">Understand Your Audience.</span>
+            <span className="bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-400 bg-clip-text text-transparent block text-6xl sm:text-7xl md:text-8xl lg:text-[140px] leading-none mt-2">
               Instantly.
             </span>
           </h1>
