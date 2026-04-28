@@ -155,7 +155,6 @@ export default function Footer() {
               <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-4 shadow-lg">S</div>
               <h5 className="text-white font-bold text-lg mb-1">Safwan Ahamed</h5>
               <p className="text-gray-400 text-sm text-center">Model Training</p>
-              <div className="flex gap-3 mt-4 h-5"></div>
             </div>
 
             {/* Team Member 3 */}
@@ -163,7 +162,6 @@ export default function Footer() {
               <div className="w-14 h-14 bg-gradient-to-br from-cyan-400 to-emerald-400 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-4 shadow-lg">N</div>
               <h5 className="text-white font-bold text-lg mb-1">Nijith Antachen</h5>
               <p className="text-gray-400 text-sm text-center">Backend Development</p>
-              <div className="flex gap-3 mt-4 h-5"></div>
             </div>
 
             {/* Team Member 4 */}
