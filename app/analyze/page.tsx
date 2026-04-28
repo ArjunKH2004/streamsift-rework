@@ -368,7 +368,7 @@ function AnalyzeContent() {
         }, 2000);
 
         return () => clearInterval(interval);
-    }, [activeLiveChatId, nextPageToken, analysis?.counts, videoContext, calculateSummary]);
+    }, [activeLiveChatId, nextPageToken, analysis?.counts, videoContext, calculateSummary, comments]);
 
 
     // Poll for Twitch chat messages every 2 seconds
