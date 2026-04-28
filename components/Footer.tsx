@@ -124,6 +124,64 @@ export default function Footer() {
           </div>
         </div>
       </div>
+
+      {/* New Neat & Tidy Footer Section */}
+      <div className="max-w-6xl mx-auto mt-20 sm:mt-32 border-t border-gray-800/60 pt-16">
+        {/* Top CTA */}
+        <div className="text-center mb-16">
+          <h3 className="text-3xl sm:text-4xl font-bold text-white mb-4 font-gilroy">Ready to turn chaos into clarity?</h3>
+          <p className="text-gray-400 text-lg sm:text-xl">Analyze comments faster with StreamSift</p>
+        </div>
+
+        {/* Team Section */}
+        <div className="mb-20">
+          <h4 className="text-xl font-bold text-white text-center mb-10 font-gilroy uppercase tracking-wider text-gray-500">Meet Team StreamSift</h4>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Team Member 1 */}
+            <div className="flex flex-col items-center text-center p-6 bg-gray-900/30 rounded-2xl border border-gray-800/50 hover:bg-gray-800/80 transition-colors">
+              <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-4 shadow-lg">A</div>
+              <h5 className="text-white font-bold text-lg mb-1">Arjun</h5>
+              <p className="text-gray-400 text-sm">Branding, Frontend, Deployment</p>
+            </div>
+
+            {/* Team Member 2 */}
+            <div className="flex flex-col items-center text-center p-6 bg-gray-900/30 rounded-2xl border border-gray-800/50 hover:bg-gray-800/80 transition-colors">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-4 shadow-lg">S</div>
+              <h5 className="text-white font-bold text-lg mb-1">Safwan</h5>
+              <p className="text-gray-400 text-sm">Model Training</p>
+            </div>
+
+            {/* Team Member 3 */}
+            <div className="flex flex-col items-center text-center p-6 bg-gray-900/30 rounded-2xl border border-gray-800/50 hover:bg-gray-800/80 transition-colors">
+              <div className="w-14 h-14 bg-gradient-to-br from-cyan-400 to-emerald-400 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-4 shadow-lg">N</div>
+              <h5 className="text-white font-bold text-lg mb-1">Nijith</h5>
+              <p className="text-gray-400 text-sm">Backend Development</p>
+            </div>
+
+            {/* Team Member 4 */}
+            <div className="flex flex-col items-center text-center p-6 bg-gray-900/30 rounded-2xl border border-gray-800/50 hover:bg-gray-800/80 transition-colors">
+              <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-4 shadow-lg">N</div>
+              <h5 className="text-white font-bold text-lg mb-1">Nikesh</h5>
+              <p className="text-gray-400 text-sm">Backend Development</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="border-t border-gray-800/60 pt-8 pb-4 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col items-center md:items-start text-center md:text-left">
+            <p className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 font-bold mb-2 text-lg">StreamSift filters the noise, finds the signal.</p>
+            <p className="text-gray-500 text-sm">© 2026 StreamSift. Built by Team StreamSift</p>
+          </div>
+          
+          <div className="flex gap-8 text-gray-400 text-sm font-medium">
+            <a href="/" className="hover:text-white transition-colors">Home</a>
+            <a href="/#features" className="hover:text-white transition-colors">Features</a>
+            <a href="/#team" className="hover:text-white transition-colors">Team</a>
+          </div>
+        </div>
+      </div>
     </footer>
   );
 }
