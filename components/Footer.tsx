@@ -141,28 +141,28 @@ export default function Footer() {
             {/* Team Member 1 */}
             <div className="flex flex-col items-center text-center p-6 bg-gray-900/30 rounded-2xl border border-gray-800/50 hover:bg-gray-800/80 transition-colors">
               <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-4 shadow-lg">A</div>
-              <h5 className="text-white font-bold text-lg mb-1">Arjun</h5>
+              <h5 className="text-white font-bold text-lg mb-1">K H Arjun</h5>
               <p className="text-gray-400 text-sm">Branding, Frontend, Deployment</p>
             </div>
 
             {/* Team Member 2 */}
             <div className="flex flex-col items-center text-center p-6 bg-gray-900/30 rounded-2xl border border-gray-800/50 hover:bg-gray-800/80 transition-colors">
               <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-4 shadow-lg">S</div>
-              <h5 className="text-white font-bold text-lg mb-1">Safwan</h5>
+              <h5 className="text-white font-bold text-lg mb-1">Safwan Ahamed</h5>
               <p className="text-gray-400 text-sm">Model Training</p>
             </div>
 
             {/* Team Member 3 */}
             <div className="flex flex-col items-center text-center p-6 bg-gray-900/30 rounded-2xl border border-gray-800/50 hover:bg-gray-800/80 transition-colors">
               <div className="w-14 h-14 bg-gradient-to-br from-cyan-400 to-emerald-400 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-4 shadow-lg">N</div>
-              <h5 className="text-white font-bold text-lg mb-1">Nijith</h5>
+              <h5 className="text-white font-bold text-lg mb-1">Nijith Antachen</h5>
               <p className="text-gray-400 text-sm">Backend Development</p>
             </div>
 
             {/* Team Member 4 */}
             <div className="flex flex-col items-center text-center p-6 bg-gray-900/30 rounded-2xl border border-gray-800/50 hover:bg-gray-800/80 transition-colors">
               <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-4 shadow-lg">N</div>
-              <h5 className="text-white font-bold text-lg mb-1">Nikesh</h5>
+              <h5 className="text-white font-bold text-lg mb-1">Nikesh D'Silva</h5>
               <p className="text-gray-400 text-sm">Backend Development</p>
             </div>
           </div>
