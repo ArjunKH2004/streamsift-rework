@@ -134,7 +134,7 @@ export default function Footer() {
         </div>
 
         {/* Team Section */}
-        <div className="mb-20">
+        <div id="team" className="mb-20">
           <h4 className="text-xl font-bold text-white text-center mb-10 font-gilroy uppercase tracking-wider text-gray-500">Meet Team StreamSift</h4>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

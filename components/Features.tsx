@@ -77,6 +77,7 @@ export default function Features() {
 
         {/* Why StreamSift Section */}
         <motion.div
+          id="features"
           className="relative text-center mb-20"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
