@@ -141,7 +141,7 @@ export default function Footer() {
             {/* Team Member 1 */}
             <div className="flex flex-col items-center text-center p-6 bg-gray-900/30 rounded-2xl border border-gray-800/50 hover:bg-gray-800/80 transition-colors">
               <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-4 shadow-lg">A</div>
-              <h5 className="text-white font-bold text-lg mb-1">K H Arjun</h5>
+              <a href="https://www.linkedin.com/in/kharjun/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#0077b5] transition-colors"><h5 className="font-bold text-lg mb-1">K H Arjun</h5></a>
               <p className="text-gray-400 text-sm">Branding, Frontend, Deployment</p>
             </div>
 
@@ -162,7 +162,7 @@ export default function Footer() {
             {/* Team Member 4 */}
             <div className="flex flex-col items-center text-center p-6 bg-gray-900/30 rounded-2xl border border-gray-800/50 hover:bg-gray-800/80 transition-colors">
               <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-4 shadow-lg">N</div>
-              <h5 className="text-white font-bold text-lg mb-1">Nikesh D&apos;Silva</h5>
+              <a href="https://www.linkedin.com/in/nikesh-d-silva-a103072a2/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#0077b5] transition-colors"><h5 className="font-bold text-lg mb-1">Nikesh D&apos;Silva</h5></a>
               <p className="text-gray-400 text-sm">Backend Development</p>
             </div>
           </div>
