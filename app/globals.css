@@ -1,35 +1,24 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap");
-@import url("https://fonts.cdnfonts.com/css/gilroy-bold");
-
-/* Gilroy font face declarations for better reliability */
 @font-face {
-  font-family: 'Gilroy';
-  src: url('https://fonts.cdnfonts.com/s/19795/Gilroy-ExtraBold.woff') format('woff');
-  font-weight: 800;
+  font-family: "Gilroy";
+  src: url("/fonts/Gilroy-Medium.woff2") format("woff2");
+  font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Gilroy';
-  src: url('https://fonts.cdnfonts.com/s/19795/Gilroy-Bold.woff') format('woff');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Gilroy';
-  src: url('https://fonts.cdnfonts.com/s/19795/Gilroy-SemiBold.woff') format('woff');
+  font-family: "Gilroy";
+  src: url("/fonts/Gilroy-Semibold.woff2") format("woff2");
   font-weight: 600;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Gilroy';
-  src: url('https://fonts.cdnfonts.com/s/19795/Gilroy-Medium.woff') format('woff');
-  font-weight: 500;
+  font-family: "Gilroy";
+  src: url("/fonts/Gilroy-Bold.woff2") format("woff2");
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
